@@ -1,73 +1,67 @@
-# React + TypeScript + Vite
+# Football Ticket Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend starter untuk aplikasi pemesanan tiket sepak bola. Repository ini dipakai sebagai pondasi awal UI berbasis React, dengan routing client-side, konfigurasi request API, dan state auth yang siap dikembangkan.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19
+- TypeScript
+- Vite
+- React Router
+- Axios
+- Zustand
+- Tailwind CSS 4
+- shadcn/ui
 
-## React Compiler
+## Fitur Starter Saat Ini
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Struktur project frontend modern dengan Vite
+- Routing dasar menggunakan `react-router`
+- Axios instance terpusat di `src/lib/axios.ts`
+- Interceptor refresh token untuk request yang kena `401`
+- Auth state global menggunakan Zustand persistence
+- Alias import `@/*` ke folder `src`
 
-## Expanding the ESLint configuration
+## Struktur Folder
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+src/
+  components/    komponen UI
+  lib/           helper dan konfigurasi shared
+  store/         global state aplikasi
+  App.tsx        entry halaman utama
+  main.tsx       bootstrap React dan router
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Menjalankan Project
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. Install dependency:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
+
+2. Siapkan environment variable:
+
+```env
+VITE_API_BASE_URL=http://localhost:3000
+```
+
+3. Jalankan development server:
+
+```bash
+npm run dev
+```
+
+## Script
+
+- `npm run dev` menjalankan Vite dev server
+- `npm run build` build production
+- `npm run lint` menjalankan ESLint
+- `npm run preview` preview hasil build
+
+## Catatan
+
+- Token akses disimpan di auth store frontend, sementara refresh token diasumsikan dikirim lewat cookie `withCredentials`.
+- Branch `main` dipakai sebagai baseline/starter.
+- Branch `dev` dipakai untuk pengembangan fitur lanjutan dari starter yang sama.
