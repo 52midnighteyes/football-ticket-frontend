@@ -7,6 +7,7 @@ export interface IUserParams {
   firstName: string;
   lastName: string;
   role: string;
+  avatarUrl: string | undefined | null;
 }
 
 interface IAuthStore {
