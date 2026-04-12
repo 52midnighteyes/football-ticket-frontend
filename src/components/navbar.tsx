@@ -10,24 +10,30 @@ import {
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
 import { logOut } from "@/api/auth/auth.api";
+
 const organizerSession = [
   { name: "Profile", link: "/profile" },
   { name: "Dashboard", link: "/dashboard" },
 ];
+
 const customerSession = [
   { name: "Profile", link: "/profile" },
   { name: "My Tickets", link: "/my-tickets" },
 ];
+
 const onLogoutSession = [
   { name: "Login", link: "/login" },
   { name: "Register", link: "/register" },
 ];
+
 const avatarFallback =
   "https://res.cloudinary.com/dhjorpzhh/image/upload/v1775836308/TwitterEgg_HP_iifytc.webp";
+
 export default function Navbar() {
   const clearSession = useAuthStore((state) => state.clearSession);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const user = useAuthStore((state) => state.user);
+
   const handleLogout = () => {
     try {
       clearSession();
@@ -37,21 +43,25 @@ export default function Navbar() {
       console.error("failed to clear persisted session on logout", error);
     }
   };
+
   const avatarUrl = optimizeCloudinaryImage(user?.avatarUrl ?? avatarFallback);
+
   const menuItems = !user
     ? onLogoutSession
     : user.role === "ORGANIZER"
       ? organizerSession
       : customerSession;
+
   return (
-    <section className="absolute flex items-center top-0 left-0 w-full max-h-25 lg:px-25 hover:bg-primary duration-400 transition-all group">
-      <div className="flex w-full justify-between p-4 ">
+    <section className="group absolute top-0 left-0 z-10 flex max-h-20 w-full items-center bg-primary transition-all duration-300 lg:bg-transparent lg:hover:bg-primary">
+      <div className="flex w-full justify-between p-4 lg:px-25 items-center">
         <Link
           to="/"
-          className="text-primary group-hover:text-background font-bold duration-400 hover:scale-105 transition-all "
+          className="font-bold h-fit text-background transition-all duration-300 lg:text-primary lg:group-hover:text-background lg:hover:scale-105"
         >
           MATCHPASS
         </Link>
+
         <div className={!user ? "hidden" : "block"}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -63,10 +73,11 @@ export default function Navbar() {
                 <img
                   src={avatarUrl}
                   alt="User avatar"
-                  className="h-full w-full object-cover"
+                  className="h-15 w-15 object-cover"
                 />
               </button>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent align="end">
               {user ? (
                 <>
@@ -76,6 +87,7 @@ export default function Navbar() {
                   <DropdownMenuSeparator />
                 </>
               ) : null}
+
               {!isHydrated ? (
                 <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
               ) : (
@@ -85,6 +97,7 @@ export default function Navbar() {
                   </DropdownMenuItem>
                 ))
               )}
+
               {user ? (
                 <>
                   <DropdownMenuSeparator />
@@ -98,14 +111,17 @@ export default function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
         <div className={user ? "hidden" : "flex gap-2"}>
           {!isHydrated ? (
-            <p>Loading...</p>
+            <p className="text-background lg:text-foreground lg:group-hover:text-background">
+              Loading...
+            </p>
           ) : (
             onLogoutSession.map(({ name, link }) => (
               <Button
                 key={link}
-                className="px-3 group-hover:bg-white group-hover:text-primary duration-400 transition-all hover:scale-110 hover:font-semibold"
+                className="px-2 font-semibold lg:px-5 text-sm transition-all duration-300 lg:group-hover:bg-white lg:group-hover:text-primary lg:hover:scale-110 lg:hover:font-semibold"
               >
                 <Link to={link}>{name}</Link>
               </Button>
