@@ -73,7 +73,7 @@ export default function Navbar() {
                 <img
                   src={avatarUrl}
                   alt="User avatar"
-                  className="h-15 w-15 object-cover"
+                  className="h-10 w-10 object-cover object-center"
                 />
               </button>
             </DropdownMenuTrigger>

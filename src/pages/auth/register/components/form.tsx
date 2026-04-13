@@ -16,21 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  type ChangeEvent,
-  useEffect,
-  useEffectEvent,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDebounce } from "@/hook/useDebounce";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import axios from "axios";
 import { EyeOffIcon, EyeIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
-
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterForm() {
   const [email, setEmail] = useState("");
@@ -39,19 +31,13 @@ export default function RegisterForm() {
   const [referralMsg, setReferralMsg] = useState("");
   const [isEmailAvailable, setIsEmailAvailable] = useState(false);
   const [isReferralValid, setIsReferralValid] = useState(false);
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-  const [isCheckingReferral, setIsCheckingReferral] = useState(false);
+  const [isDebouncing, setIsDebouncing] = useState(false);
   const [isHidden, setIsHidden] = useState(true);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const emailQuery = useDebounce(email);
   const referralQuery = useDebounce(referral);
   const navigate = useNavigate();
-  const isDebouncing =
-    email !== emailQuery ||
-    referral !== referralQuery ||
-    isCheckingEmail ||
-    isCheckingReferral;
 
   const initialValues: IRegisterUserParams = {
     email: "",
@@ -62,43 +48,56 @@ export default function RegisterForm() {
     referrerCode: "",
   };
 
-  const checkEmailAvailability = useEffectEvent(async (query: string) => {
-    setIsCheckingEmail(true);
+  const checkEmailAvailability = async () => {
+    setIsDebouncing(true);
 
-    try {
-      const response = await checkEmailExists(query);
-
-      if (!response) {
-        setEmailMsg("Error checking email availability");
-        setIsEmailAvailable(false);
-        return;
-      }
-
-      setEmailMsg(response);
-      setIsEmailAvailable(response.toLowerCase().includes("available"));
-    } finally {
-      setIsCheckingEmail(false);
+    if (
+      emailQuery.trim() === "" ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailQuery)
+    ) {
+      setEmailMsg("");
+      setIsEmailAvailable(false);
+      setIsDebouncing(false);
+      return;
     }
-  });
 
-  const checkReferralAvailability = useEffectEvent(async (query: string) => {
-    setIsCheckingReferral(true);
+    const response = await checkEmailExists(emailQuery);
 
-    try {
-      const response = await checkReferrerCodeExists(query);
-
-      if (!response) {
-        setReferralMsg("Error checking referral availability");
-        setIsReferralValid(false);
-        return;
-      }
-
-      setReferralMsg(response);
-      setIsReferralValid(!response.toLowerCase().includes("invalid"));
-    } finally {
-      setIsCheckingReferral(false);
+    if (!response) {
+      setEmailMsg("Error checking email availability");
+      setIsEmailAvailable(false);
+      setIsDebouncing(false);
+      return;
     }
-  });
+
+    setEmailMsg(response);
+    setIsEmailAvailable(response.toLowerCase().includes("available"));
+    setIsDebouncing(false);
+  };
+
+  const checkReferralAvailability = async () => {
+    if (referralQuery.trim() === "" || referralQuery.trim().length < 6) {
+      setReferralMsg("");
+      setIsReferralValid(false);
+      setIsDebouncing(false);
+      return;
+    }
+
+    setIsDebouncing(true);
+
+    const response = await checkReferrerCodeExists(referralQuery);
+
+    if (!response) {
+      setReferralMsg("Error checking referral availability");
+      setIsReferralValid(false);
+      setIsDebouncing(false);
+      return;
+    }
+
+    setReferralMsg(response);
+    setIsReferralValid(!response.toLowerCase().includes("invalid"));
+    setIsDebouncing(false);
+  };
 
   const onSubmit = async (values: IRegisterUserParams) => {
     try {
@@ -118,17 +117,21 @@ export default function RegisterForm() {
   };
 
   useEffect(() => {
-    if (!emailQuery.trim() || !emailPattern.test(emailQuery)) {
+    if (!emailQuery) {
+      setEmailMsg("");
+      setIsEmailAvailable(false);
       return;
     }
-    void checkEmailAvailability(emailQuery);
+    checkEmailAvailability();
   }, [emailQuery]);
 
   useEffect(() => {
-    if (!referralQuery.trim() || referralQuery.trim().length < 6) {
+    if (!referralQuery) {
+      setReferralMsg("");
+      setIsReferralValid(false);
       return;
     }
-    void checkReferralAvailability(referralQuery);
+    checkReferralAvailability();
   }, [referralQuery]);
 
   useEffect(() => {
@@ -142,7 +145,7 @@ export default function RegisterForm() {
       onSubmit={onSubmit}
     >
       {({ isSubmitting, setFieldValue, values, errors }) => (
-        <Form className="flex min-h-[480px] w-full min-w-[280px] max-w-[420px] flex-col items-center gap-4 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-md">
+        <Form className="flex min-h-120 w-full min-w-70 max-w-105 flex-col items-center gap-4 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-md">
           <div className="w-full">
             <Label htmlFor="email" className="mb-2 block text-sm font-medium">
               Email
@@ -155,17 +158,9 @@ export default function RegisterForm() {
               name="email"
               placeholder="example@example.com"
               className="border-input bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                const nextEmail = e.target.value;
-
-                setFieldValue("email", nextEmail);
-                setEmail(nextEmail);
-                setEmailMsg("");
-                setIsEmailAvailable(false);
-
-                if (!nextEmail.trim() || !emailPattern.test(nextEmail)) {
-                  setIsCheckingEmail(false);
-                }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                setFieldValue("email", e.target.value);
+                setEmail(e.target.value);
               }}
             />
             <ErrorMessage
@@ -308,17 +303,9 @@ export default function RegisterForm() {
               name="referrerCode"
               placeholder="Referrer Code (optional)"
               className="border-input bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                const nextReferral = e.target.value;
-
-                setFieldValue("referrerCode", nextReferral);
-                setReferral(nextReferral);
-                setReferralMsg("");
-                setIsReferralValid(false);
-
-                if (!nextReferral.trim() || nextReferral.trim().length < 6) {
-                  setIsCheckingReferral(false);
-                }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                setFieldValue("referrerCode", e.target.value);
+                setReferral(e.target.value);
               }}
             />
             <ErrorMessage

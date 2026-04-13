@@ -1,7 +1,20 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import RegisterForm from "./components/form";
+import { useAuthStore } from "@/store/auth.store";
+import { useEffect } from "react";
 
 export default function RegisterPage() {
+  const userSession = useAuthStore((state) => state.user);
+  const navigate = useNavigate();
+  const isHydrated = useAuthStore((state) => state.isHydrated);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (userSession) {
+      navigate("/");
+    }
+  }, [userSession, isHydrated]);
+
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center gap-5 bg-background px-10 pt-10">
       <div className="flex flex-col items-center text-center">

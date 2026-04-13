@@ -27,3 +27,7 @@ export interface IAuthData {
   accessToken: string;
   user: IUserSession;
 }
+
+export interface IEmailPayload {
+  email: string;
+}

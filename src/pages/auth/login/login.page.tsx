@@ -1,7 +1,19 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import LoginForm from "./components/form";
+import { useEffect } from "react";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function LoginPage() {
+  const userSession = useAuthStore((state) => state.user);
+  const navigate = useNavigate();
+  const isHydrated = useAuthStore((state) => state.isHydrated);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (userSession) {
+      navigate("/");
+    }
+  }, [userSession, isHydrated]);
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center gap-5 bg-background px-6 py-15">
       <div className="text-center">
