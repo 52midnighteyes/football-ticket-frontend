@@ -6,14 +6,14 @@ import type { IEmailPayload } from "@/api/auth/auth.interface";
 import { requestForgotPassword } from "@/api/auth/auth.api";
 import { toast } from "sonner";
 import axios from "axios";
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 
 export default function RequestForgotPasswordForm({
   onSubmitChange,
 }: {
   onSubmitChange: (submitted: boolean) => void;
 }) {
-  const [_isSubmitted, setIsSubmitted] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const handleSubmit = async (values: IEmailPayload) => {
     try {
       const response = await requestForgotPassword(values.email);
@@ -22,7 +22,6 @@ export default function RequestForgotPasswordForm({
         return;
       }
       toast.success(response.message);
-      setIsSubmitted(true);
       onSubmitChange(true);
     } catch (error) {
       if (error instanceof axios.AxiosError && error.response) {
@@ -35,6 +34,9 @@ export default function RequestForgotPasswordForm({
     }
   };
 
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
   return (
     <Formik
       initialValues={{ email: "" }}
@@ -45,7 +47,7 @@ export default function RequestForgotPasswordForm({
         <Form className="flex w-full min-w-70 max-w-105 h-fit flex-col items-center gap-4 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-md">
           <div className="w-full">
             <label htmlFor="email">Email</label>
-            <Field as={Input} type="email" name="email" />
+            <Field as={Input} ref={inputRef} type="email" name="email" />
             <ErrorMessage
               name="email"
               component="div"

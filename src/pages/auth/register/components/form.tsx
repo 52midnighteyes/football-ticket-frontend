@@ -79,7 +79,6 @@ export default function RegisterForm() {
     if (referralQuery.trim() === "" || referralQuery.trim().length < 6) {
       setReferralMsg("");
       setIsReferralValid(false);
-      setIsDebouncing(false);
       return;
     }
 
@@ -105,8 +104,6 @@ export default function RegisterForm() {
       toast.success("Registration successful! Please log in.");
       navigate("/login");
     } catch (error) {
-      console.error("Error registering user:", error);
-
       if (axios.isAxiosError(error)) {
         toast.error(error.response?.data?.message || "Registration failed");
         return;
@@ -118,8 +115,6 @@ export default function RegisterForm() {
 
   useEffect(() => {
     if (!emailQuery) {
-      setEmailMsg("");
-      setIsEmailAvailable(false);
       return;
     }
     checkEmailAvailability();
@@ -127,8 +122,6 @@ export default function RegisterForm() {
 
   useEffect(() => {
     if (!referralQuery) {
-      setReferralMsg("");
-      setIsReferralValid(false);
       return;
     }
     checkReferralAvailability();
@@ -173,7 +166,7 @@ export default function RegisterForm() {
               <div
                 className={`mt-1 text-sm ${
                   emailMsg.toLowerCase().includes("available")
-                    ? "text-primary"
+                    ? "text-accent"
                     : "text-destructive"
                 }`}
               >
@@ -319,7 +312,7 @@ export default function RegisterForm() {
               referralMsg && (
                 <div
                   className={`mt-1 text-sm ${
-                    isReferralValid ? "text-primary" : "text-destructive"
+                    isReferralValid ? "text-accent" : "text-destructive"
                   }`}
                 >
                   {referralMsg}

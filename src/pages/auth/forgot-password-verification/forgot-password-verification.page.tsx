@@ -8,11 +8,15 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 
 export default function ForgotPasswordVerificationPage() {
-  const [isActiveSession, setIsActiveSession] = useState<boolean | null>(null);
   const [isSubmitted, setIsSubmitted] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [tokenStatus, setTokenStatus] = useState<"checking" | "valid">(
+    "checking",
+  );
+
   const userSession = useAuthStore((state) => state.user);
   const isHydrated = useAuthStore((state) => state.isHydrated);
+  const isActiveSession = isHydrated && !!userSession;
+  const isLoading = !isHydrated || tokenStatus === "checking";
 
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
@@ -29,10 +33,7 @@ export default function ForgotPasswordVerificationPage() {
 
     if (!isHydrated) return;
 
-    if (userSession) {
-      setIsActiveSession(true);
-      setIsLoading(false);
-
+    if (isActiveSession) {
       const timer = setTimeout(() => {
         navigate("/");
       }, 3000);
@@ -49,12 +50,15 @@ export default function ForgotPasswordVerificationPage() {
         if (isCancelled) return;
 
         if (response.data === 0) {
+          toast.error(
+            "Invalid or expired token. Please request a new password reset.",
+          );
           navigate("/");
           return;
         }
 
         toast.success(response.message);
-        setIsLoading(false);
+        setTokenStatus("valid");
       } catch (error) {
         if (isCancelled) return;
 
@@ -89,7 +93,7 @@ export default function ForgotPasswordVerificationPage() {
     return () => clearTimeout(timer);
   }, [isSubmitted]);
 
-  if (isLoading && !isActiveSession) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center gap-5 bg-background px-10 pt-10">
         <Spinner className="scale-200" />
@@ -123,11 +127,11 @@ export default function ForgotPasswordVerificationPage() {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center gap-5 bg-background px-10 pt-10">
         <div className="flex w-full min-w-70 max-w-105 h-fit flex-col items-center gap-2 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-md">
-          <h3 className="text-primary  font-bold">
+          <h3 className="text-primary font-bold text-center">
             Your password has been successfully reset
           </h3>
           <p className="font-medium text-center text-muted-foreground">
-            You can now log in with your new password.
+            You can now log in with your new password. Don't lose it again!
           </p>
 
           <div className="flex items-center gap-1 mt-2">
