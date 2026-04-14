@@ -13,7 +13,7 @@ export default function LoginPage() {
     if (userSession) {
       navigate("/");
     }
-  }, [userSession, isHydrated]);
+  }, [userSession, isHydrated, navigate]);
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center gap-5 bg-background px-6 py-15">
       <div className="text-center">

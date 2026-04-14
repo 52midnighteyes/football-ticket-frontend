@@ -13,7 +13,7 @@ export default function RegisterPage() {
     if (userSession) {
       navigate("/");
     }
-  }, [userSession, isHydrated]);
+  }, [userSession, isHydrated, navigate]);
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center gap-5 bg-background px-10 pt-10">

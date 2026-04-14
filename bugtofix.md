@@ -1,54 +1,34 @@
 # Bug To Fix
 
-Catatan singkat untuk flaw yang masih relevan ke MVP dan belum diperbaiki di branch ini.
+Catatan hasil pengecekan terbaru yang masih perlu follow-up, tanpa perbaikan tambahan.
 
 ## Status Saat Ini
 
-- `npm.cmd run lint` masih merah: `2 error`, `8 warning`
-- Branch target: `feat/auth`
+- `eslint .` bersih: tidak ada error dan tidak ada warning.
+- `npm.cmd run build` berhasil.
+- Masih ada 1 warning saat production build.
 
-## Flaw Yang Berdampak Ke MVP
+## Warning Yang Masih Tersisa
 
-### 1. Register form async validation masih kena lint dan berisiko race/stale state
+### 1. Bundle JS utama terlalu besar saat build produksi
 
-File:
-- `src/pages/auth/register/components/form.tsx`
+File output:
+- `dist/assets/index-C-bEZ1kl.js`
 
-Masalah:
-- `useEffect` memanggil `checkEmailAvailability()` dan `checkReferralAvailability()`
-- kedua function itu langsung melakukan beberapa `setState(...)`
-- ESLint `react-hooks/set-state-in-effect` masih error
+Detail warning:
+- Vite melaporkan ada chunk yang lebih besar dari `500 kB` setelah minify.
+- Output saat build menunjukkan bundle utama sekitar `538.33 kB` dengan gzip sekitar `169.68 kB`.
 
-Dampak ke MVP:
-- feedback availability email/referral bisa stale saat user mengetik cepat
-- state debounce / availability berpotensi tidak sinkron dengan input terbaru
-- branch belum bisa lolos lint
+Dampak:
+- initial load bisa lebih berat, terutama di koneksi lambat
+- warning ini bisa menyulitkan pemantauan regresi ukuran bundle ke depannya
 
-Arahan fix:
-- pindahkan reset state sinkron ke handler `onChange`
-- pindahkan async request ke dalam masing-masing `useEffect`
-- tambahkan cancel guard supaya hasil request lama tidak menimpa state baru
+Arahan follow-up:
+- cek kandidat code splitting dengan `dynamic import()`
+- audit dependency yang masuk ke main bundle
+- pertimbangkan pengaturan chunking di konfigurasi build bila memang perlu
 
-### 2. Missing dependency di beberapa auth page effect
+## Catatan
 
-File:
-- `src/pages/auth/forgot-password-verification/forgot-password-verification.page.tsx`
-- `src/pages/auth/login/login.page.tsx`
-- `src/pages/auth/register/register.page.tsx`
-- `src/pages/auth/request-forgot-password/request-forgot-password.page.tsx`
-
-Masalah:
-- beberapa `useEffect` masih belum menyertakan dependency seperti `navigate` atau `isActiveSession`
-
-Dampak ke MVP:
-- flow redirect / token check bisa jadi tidak konsisten saat nilai terkait berubah
-- lint warning masih tersisa dan menutupi warning lain yang lebih penting
-
-Arahan fix:
-- lengkapi dependency array sesuai nilai yang dipakai di effect
-- kalau sebuah effect mulai terlalu sensitif terhadap dependency, pecah effect berdasarkan tanggung jawab
-
-## Bukan Bagian Branch Ini
-
-- flaw di atas sengaja tidak diperbaiki di branch ini
-- branch ini hanya mendorong update fitur/auth terbaru + dokumentasi bug singkat untuk follow-up
+- Tidak ada lint error/warning lain yang terdeteksi saat pengecekan ini.
+- Build sempat gagal di sandbox, tetapi berhasil saat dijalankan di luar sandbox, jadi itu tidak saya catat sebagai bug proyek.

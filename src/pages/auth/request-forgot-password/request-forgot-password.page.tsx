@@ -20,7 +20,7 @@ export default function RequestForgotPasswordPage() {
     if (userSession) {
       navigate("/");
     }
-  }, [userSession, isHydrated]);
+  }, [userSession, isHydrated, navigate]);
 
   useEffect(() => {
     if (!isSubmitted) return;
@@ -30,7 +30,7 @@ export default function RequestForgotPasswordPage() {
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [isSubmitted]);
+  }, [isSubmitted, navigate]);
 
   if (!isSubmitted)
     return (

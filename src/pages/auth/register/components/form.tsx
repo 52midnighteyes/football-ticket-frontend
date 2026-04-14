@@ -48,56 +48,6 @@ export default function RegisterForm() {
     referrerCode: "",
   };
 
-  const checkEmailAvailability = async () => {
-    setIsDebouncing(true);
-
-    if (
-      emailQuery.trim() === "" ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailQuery)
-    ) {
-      setEmailMsg("");
-      setIsEmailAvailable(false);
-      setIsDebouncing(false);
-      return;
-    }
-
-    const response = await checkEmailExists(emailQuery);
-
-    if (!response) {
-      setEmailMsg("Error checking email availability");
-      setIsEmailAvailable(false);
-      setIsDebouncing(false);
-      return;
-    }
-
-    setEmailMsg(response);
-    setIsEmailAvailable(response.toLowerCase().includes("available"));
-    setIsDebouncing(false);
-  };
-
-  const checkReferralAvailability = async () => {
-    if (referralQuery.trim() === "" || referralQuery.trim().length < 6) {
-      setReferralMsg("");
-      setIsReferralValid(false);
-      return;
-    }
-
-    setIsDebouncing(true);
-
-    const response = await checkReferrerCodeExists(referralQuery);
-
-    if (!response) {
-      setReferralMsg("Error checking referral availability");
-      setIsReferralValid(false);
-      setIsDebouncing(false);
-      return;
-    }
-
-    setReferralMsg(response);
-    setIsReferralValid(!response.toLowerCase().includes("invalid"));
-    setIsDebouncing(false);
-  };
-
   const onSubmit = async (values: IRegisterUserParams) => {
     try {
       await registerUser(values);
@@ -114,17 +64,90 @@ export default function RegisterForm() {
   };
 
   useEffect(() => {
-    if (!emailQuery) {
-      return;
-    }
-    checkEmailAvailability();
+    let isMounted = true;
+
+    const checkEmailAvailability = async () => {
+      if (
+        emailQuery.trim() === "" ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailQuery)
+      ) {
+        if (!isMounted) {
+          return;
+        }
+
+        setEmailMsg("");
+        setIsEmailAvailable(false);
+        setIsDebouncing(false);
+        return;
+      }
+
+      setIsDebouncing(true);
+
+      const response = await checkEmailExists(emailQuery);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (!response) {
+        setEmailMsg("Error checking email availability");
+        setIsEmailAvailable(false);
+        setIsDebouncing(false);
+        return;
+      }
+
+      setEmailMsg(response);
+      setIsEmailAvailable(response.toLowerCase().includes("available"));
+      setIsDebouncing(false);
+    };
+
+    void checkEmailAvailability();
+
+    return () => {
+      isMounted = false;
+    };
   }, [emailQuery]);
 
   useEffect(() => {
-    if (!referralQuery) {
-      return;
-    }
-    checkReferralAvailability();
+    let isMounted = true;
+
+    const checkReferralAvailability = async () => {
+      if (referralQuery.trim() === "" || referralQuery.trim().length < 6) {
+        if (!isMounted) {
+          return;
+        }
+
+        setReferralMsg("");
+        setIsReferralValid(false);
+        setIsDebouncing(false);
+        return;
+      }
+
+      setIsDebouncing(true);
+
+      const response = await checkReferrerCodeExists(referralQuery);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (!response) {
+        setReferralMsg("Error checking referral availability");
+        setIsReferralValid(false);
+        setIsDebouncing(false);
+        return;
+      }
+
+      setReferralMsg(response);
+      setIsReferralValid(!response.toLowerCase().includes("invalid"));
+      setIsDebouncing(false);
+    };
+
+    void checkReferralAvailability();
+
+    return () => {
+      isMounted = false;
+    };
   }, [referralQuery]);
 
   useEffect(() => {

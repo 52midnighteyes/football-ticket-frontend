@@ -82,7 +82,7 @@ export default function ForgotPasswordVerificationPage() {
     return () => {
       isCancelled = true;
     };
-  }, [token, isHydrated, userSession, navigate]);
+  }, [token, isHydrated, isActiveSession, navigate]);
 
   useEffect(() => {
     if (!isSubmitted) return;
@@ -91,7 +91,7 @@ export default function ForgotPasswordVerificationPage() {
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [isSubmitted]);
+  }, [isSubmitted, navigate]);
 
   if (isLoading) {
     return (
