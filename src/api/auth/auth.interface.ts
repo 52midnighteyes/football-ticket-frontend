@@ -14,6 +14,11 @@ export interface ILoginUserParams {
   password: string;
 }
 
+export interface IUpdatePasswordParams {
+  oldPassword: string;
+  newPassword: string;
+}
+
 export interface IUserSession {
   id: string;
   email: string;
@@ -21,6 +26,7 @@ export interface IUserSession {
   lastName: string;
   role: TUserRole;
   avatarUrl: string | null;
+  isVerified: boolean;
 }
 
 export interface IAuthData {
@@ -30,4 +36,9 @@ export interface IAuthData {
 
 export interface IEmailPayload {
   email: string;
+}
+
+export interface IVerifyUserPayload {
+  accessToken: string;
+  user: IUserSession;
 }

@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { optimizeCloudinaryImage } from "@/lib/cloudinary";
 import { useAuthStore } from "@/store/auth.store";
 import {
@@ -26,10 +26,11 @@ const onLogoutSession = [
   { name: "Register", link: "/register" },
 ];
 
-const avatarFallback =
+export const avatarFallback =
   "https://res.cloudinary.com/dhjorpzhh/image/upload/v1775836308/TwitterEgg_HP_iifytc.webp";
 
 export default function Navbar() {
+  const navigate = useNavigate();
   const clearSession = useAuthStore((state) => state.clearSession);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const user = useAuthStore((state) => state.user);
@@ -49,8 +50,8 @@ export default function Navbar() {
   const menuItems = !user
     ? onLogoutSession
     : user.role === "ORGANIZER"
-      ? organizerSession
-      : customerSession;
+    ? organizerSession
+    : customerSession;
 
   return (
     <section className="group absolute top-0 left-0 z-10 flex max-h-20 w-full items-center bg-primary transition-all duration-300 lg:bg-transparent lg:hover:bg-primary">
@@ -78,12 +79,21 @@ export default function Navbar() {
               </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="center">
               {user ? (
                 <>
-                  <DropdownMenuItem disabled>
-                    {user.firstName} {user.lastName}
+                  <DropdownMenuItem
+                    disabled
+                    className="flex  flex-col items-start gap-0.5 w-full opacity-100 "
+                  >
+                    <p className="font-semibold first-letter:capitalize ">
+                      {user.firstName} {user.lastName}
+                    </p>
+                    <span className="text-accent first-letter:capitalize lowercase">
+                      {user.role}
+                    </span>
                   </DropdownMenuItem>
+
                   <DropdownMenuSeparator />
                 </>
               ) : null}
@@ -121,9 +131,11 @@ export default function Navbar() {
             onLogoutSession.map(({ name, link }) => (
               <Button
                 key={link}
+                type="button"
+                onClick={() => navigate(link)}
                 className="px-2 font-semibold lg:px-5 text-sm transition-all duration-300 lg:group-hover:bg-white lg:group-hover:text-primary lg:hover:scale-110 lg:hover:font-semibold"
               >
-                <Link to={link}>{name}</Link>
+                {name}
               </Button>
             ))
           )}

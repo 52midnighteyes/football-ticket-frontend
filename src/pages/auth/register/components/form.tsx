@@ -51,7 +51,9 @@ export default function RegisterForm() {
   const onSubmit = async (values: IRegisterUserParams) => {
     try {
       await registerUser(values);
-      toast.success("Registration successful! Please log in.");
+      toast.success(
+        "Registration successful! we've sent you a verification email."
+      );
       navigate("/login");
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -350,7 +352,8 @@ export default function RegisterForm() {
               isSubmitting ||
               !isEmailAvailable ||
               Boolean(errors.email) ||
-              isDebouncing
+              isDebouncing ||
+              (values.referrerCode !== "" && !isReferralValid)
             }
           >
             Register
