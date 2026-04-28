@@ -13,6 +13,7 @@ import { logOut } from "@/api/auth/auth.api";
 
 const organizerSession = [
   { name: "Profile", link: "/profile" },
+  { name: "Create Event", link: "/event/create" },
   { name: "Dashboard", link: "/dashboard" },
 ];
 

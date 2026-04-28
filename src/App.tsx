@@ -7,6 +7,7 @@ import RequestForgotPasswordPage from "./pages/auth/request-forgot-password/requ
 import ForgotPasswordVerificationPage from "./pages/auth/forgot-password-verification/forgot-password-verification.page";
 import VerifyAccountPage from "./pages/auth/verify-account/verify-account.page";
 import UserProfilePage from "./pages/user/profile/profile.page";
+import CreateEventPage from "./pages/event/create-event/create-event.page";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             element={<ForgotPasswordVerificationPage />}
           />
           <Route path="/profile" element={<UserProfilePage />} />
+          <Route path="/event/create" element={<CreateEventPage />} />
           <Route path="/verify/:token" element={<VerifyAccountPage />} />
         </Routes>
       </main>
