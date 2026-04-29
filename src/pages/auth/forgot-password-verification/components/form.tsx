@@ -21,22 +21,32 @@ export default function ForgotPasswordVerificationForm({
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const onSubmit = async (values: IForgotPasswordVerificationParams) => {
+  const onSubmit = async (
+    values: IForgotPasswordVerificationParams,
+    { setStatus }: { setStatus: (status?: string) => void },
+  ) => {
+    setStatus(undefined);
+
     try {
       const response = await forgotPasswordVerification(values, token);
       if (!response.message) {
-        toast.error("Failed to reset password. Please try again.");
+        const errorMessage = "Failed to reset password. Please try again.";
+        setStatus(errorMessage);
+        toast.error(errorMessage);
         return;
       }
       toast.success(response.message);
       onSubmitChange(true);
     } catch (error) {
       if (error instanceof axios.AxiosError && error.response) {
-        toast.error(
-          error.response.data.message || "An error occurred. Please try again.",
-        );
+        const errorMessage =
+          error.response.data.message || "An error occurred. Please try again.";
+        setStatus(errorMessage);
+        toast.error(errorMessage);
+        return;
       }
 
+      setStatus("An error occurred. Please try again.");
       toast.error("An error occurred. Please try again.");
     }
   };
@@ -53,9 +63,9 @@ export default function ForgotPasswordVerificationForm({
     <Formik
       initialValues={initialValues}
       validationSchema={forgotPasswordVerificationSchema}
-      onSubmit={(values) => onSubmit(values)}
+      onSubmit={onSubmit}
     >
-      {({ isSubmitting }) => (
+      {({ isSubmitting, status }) => (
         <Form className="flex h-fit w-full min-w-70 max-w-105 flex-col items-center gap-4 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-md">
           <div className="w-full gap-1.5">
             <Label htmlFor="newPassword">New Password</Label>
@@ -104,6 +114,12 @@ export default function ForgotPasswordVerificationForm({
               className="text-sm text-destructive"
             />
           </div>
+
+          {status ? (
+            <div className="w-full rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {status}
+            </div>
+          ) : null}
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             Submit

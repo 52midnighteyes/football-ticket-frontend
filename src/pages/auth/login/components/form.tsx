@@ -8,6 +8,7 @@ import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { loginUser } from "@/api/auth/auth.api";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/store/auth.store";
+import axios from "axios";
 
 export default function LoginForm() {
   const [isHidden, setIsHidden] = useState(true);
@@ -21,16 +22,29 @@ export default function LoginForm() {
     password: "",
   };
 
-  const onSubmit = async (values: typeof initialValues) => {
+  const onSubmit = async (
+    values: typeof initialValues,
+    { setStatus }: { setStatus: (status?: string) => void },
+  ) => {
+    setStatus(undefined);
+
     try {
       const response = await loginUser(values);
       if (!response.data) throw new Error("Invalid response from server");
 
       setSession(response.data.user, response.data.accessToken);
       toast.success("Login successful!");
-      navigate("/");
-    } catch {
-      toast.error("An error occurred while submitting the form.");
+      navigate("/", { replace: true });
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorMessage = error.response?.data?.message ?? "Login failed";
+        setStatus(errorMessage);
+        toast.error(errorMessage);
+        return;
+      }
+
+      setStatus("Login failed");
+      toast.error("Login failed");
     }
   };
 
@@ -40,7 +54,7 @@ export default function LoginForm() {
 
   return (
     <Formik initialValues={initialValues} onSubmit={onSubmit}>
-      {({ isSubmitting }) => (
+      {({ isSubmitting, status }) => (
         <Form className="flex h-fit w-full min-w-70 max-w-105 flex-col items-center gap-4 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-md">
           <div className="w-full">
             <Label htmlFor="email" className="mb-2 block text-sm font-medium">
@@ -100,6 +114,12 @@ export default function LoginForm() {
               className="mt-1 text-sm text-destructive"
             />
           </div>
+
+          {status ? (
+            <div className="w-full rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {status}
+            </div>
+          ) : null}
 
           <Button
             type="submit"

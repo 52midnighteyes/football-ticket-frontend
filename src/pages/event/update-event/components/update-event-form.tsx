@@ -2,19 +2,26 @@ import axios from "axios";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
-import { createEvent } from "@/api/event/event.api";
+import { updateEvent } from "@/api/event/event.api";
+import type { IEvent } from "@/api/event/event.interface";
 import EventForm from "@/pages/event/components/event-form";
 import type { IUserParams } from "@/store/auth.store";
 import {
-  createEventInitialValues,
+  mapEventToFormValues,
   type ICreateEventFormValues,
-} from "./create-event.schema";
+} from "@/pages/event/create-event/components/create-event.schema";
 
-interface CreateEventFormProps {
+interface UpdateEventFormProps {
   user: IUserParams;
+  event: IEvent;
+  onUpdated: (event: IEvent) => void;
 }
 
-export default function CreateEventForm({ user }: CreateEventFormProps) {
+export default function UpdateEventForm({
+  user,
+  event,
+  onUpdated,
+}: UpdateEventFormProps) {
   const navigate = useNavigate();
 
   const handleSubmit = async (
@@ -24,13 +31,8 @@ export default function CreateEventForm({ user }: CreateEventFormProps) {
       resetBannerField: () => void;
     },
   ) => {
-    if (!values.bannerUrl) {
-      toast.error("Banner image is required");
-      return;
-    }
-
     try {
-      const response = await createEvent(user.id, {
+      const response = await updateEvent(event.id, {
         categoryId: values.categoryId,
         cityId: values.cityId,
         name: values.name.trim(),
@@ -42,6 +44,7 @@ export default function CreateEventForm({ user }: CreateEventFormProps) {
         status: values.status,
         bannerUrl: values.bannerUrl,
         ticketTypes: values.ticketTypes.map((ticketType) => ({
+          ...(ticketType.id ? { id: ticketType.id } : {}),
           name: ticketType.name.trim(),
           price: Number(ticketType.price),
           quota: Number(ticketType.quota),
@@ -49,32 +52,33 @@ export default function CreateEventForm({ user }: CreateEventFormProps) {
         })),
       });
 
-      toast.success(response.message || "Event created successfully");
-      helpers.resetForm();
+      if (response.data) {
+        onUpdated(response.data);
+      }
+
       helpers.resetBannerField();
+      toast.success(response.message || "Event updated successfully");
       navigate("/dashboard");
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        toast.error(
-          error.response?.data?.message ??
-            "Failed to create event and ticket types",
-        );
+        toast.error(error.response?.data?.message ?? "Failed to update event");
         return;
       }
 
-      toast.error("Failed to create event and ticket types");
+      toast.error("Failed to update event");
     }
   };
 
   return (
     <EventForm
       user={user}
-      mode="create"
-      title="Create a new event"
-      description="Set the banner, schedule, and ticket setup in one clean flow."
-      submitLabel="Create Event"
-      submittingLabel="Creating..."
-      initialValues={createEventInitialValues}
+      mode="update"
+      title="Update event"
+      description="Keep the banner, schedule, and ticket availability in sync from one place."
+      submitLabel="Update Event"
+      submittingLabel="Updating..."
+      initialValues={mapEventToFormValues(event)}
+      initialBannerUrl={event.bannerUrl}
       onSubmit={handleSubmit}
     />
   );

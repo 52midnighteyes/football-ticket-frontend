@@ -26,7 +26,7 @@ export default function RequestForgotPasswordPage() {
     if (!isSubmitted) return;
 
     const timer = setTimeout(() => {
-      navigate("/");
+      navigate("/login");
     }, 3000);
 
     return () => clearTimeout(timer);

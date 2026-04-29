@@ -61,11 +61,46 @@ export interface IPaginatedResponse<T> {
   };
 }
 
-export interface ICreateTicketTypeParams {
+export interface IEventQueryParams {
+  organizerId?: string;
+  locationId?: string;
+  categoryId?: string;
+  nameLike?: string;
+  status?: EventStatus;
+  page?: number;
+  limit?: number;
+}
+
+export interface ICategoryQueryParams {
+  id?: string;
+  name?: string;
+  nameLike?: string;
+  sortBy?: "name" | "createdAt" | "updatedAt";
+  sortOrder?: "asc" | "desc";
+}
+
+export interface ICityQueryParams {
+  id?: string;
+  provinceId?: string;
+  code?: string;
+  name?: string;
+  codeLike?: string;
+  nameLike?: string;
+  sortBy?: "name" | "code" | "createdAt" | "updatedAt";
+  sortOrder?: "asc" | "desc";
+}
+
+export interface IEventTicketTypeParams {
   name: string;
   price: number;
   quota: number;
   isActive?: boolean;
+}
+
+export type ICreateTicketTypeParams = IEventTicketTypeParams;
+
+export interface IUpdateTicketTypeParams extends IEventTicketTypeParams {
+  id?: string;
 }
 
 export interface ICreateEventParams {
@@ -79,5 +114,19 @@ export interface ICreateEventParams {
   endAt: string;
   status?: EventStatus;
   bannerUrl: File;
-  ticketTypes: ICreateTicketTypeParams[];
+  ticketTypes: IEventTicketTypeParams[];
+}
+
+export interface IUpdateEventParams {
+  categoryId: string;
+  cityId: string;
+  name: string;
+  description: string;
+  venue: string;
+  address: string;
+  startAt: string;
+  endAt: string;
+  status?: EventStatus;
+  bannerUrl?: File | null;
+  ticketTypes: IUpdateTicketTypeParams[];
 }

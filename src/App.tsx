@@ -8,6 +8,9 @@ import ForgotPasswordVerificationPage from "./pages/auth/forgot-password-verific
 import VerifyAccountPage from "./pages/auth/verify-account/verify-account.page";
 import UserProfilePage from "./pages/user/profile/profile.page";
 import CreateEventPage from "./pages/event/create-event/create-event.page";
+import UpdateEventPage from "./pages/event/update-event/update-event.page";
+import DashboardPage from "./pages/organizer/dashboard/dashboard.page";
+import NotFoundPage from "./pages/not-found/not-found.page";
 
 function App() {
   return (
@@ -15,7 +18,7 @@ function App() {
       <main className="relative">
         <Navbar />
         <Routes>
-          <Route path="/" element={""} />
+          <Route path="/" element={<div>dummy homepage</div>} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route
@@ -27,8 +30,11 @@ function App() {
             element={<ForgotPasswordVerificationPage />}
           />
           <Route path="/profile" element={<UserProfilePage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/event/create" element={<CreateEventPage />} />
+          <Route path="/event/update/:id" element={<UpdateEventPage />} />
           <Route path="/verify/:token" element={<VerifyAccountPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
     </>

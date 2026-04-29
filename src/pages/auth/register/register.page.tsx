@@ -11,7 +11,7 @@ export default function RegisterPage() {
   useEffect(() => {
     if (!isHydrated) return;
     if (userSession) {
-      navigate("/");
+      navigate("/", { replace: true });
     }
   }, [userSession, isHydrated, navigate]);
 

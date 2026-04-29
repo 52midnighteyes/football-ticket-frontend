@@ -47,12 +47,20 @@ Role guard yang aktif saat ini:
 - `PATCH /api/users/avatar`
 - `GET /api/users/referral/:referralCode`
 - `GET /api/event`
+- `GET /api/event/:id`
+- `GET /api/event/slug/:slug`
 - `POST /api/event/organizer/:id`
 - `POST /api/event/:id/ticket-types`
 - `PUT /api/event/:id`
 - `DELETE /api/event/:id`
-- `GET /api/cities`
+- `GET /api/locations/countries`
+- `GET /api/locations/provinces`
+- `GET /api/locations/cities`
 - `GET /api/categories`
+- `POST /api/transactions`
+- `GET /api/transactions/me`
+- `GET /api/transactions/vouchers/check`
+- `GET /api/transactions/coupons/me`
 
 ## Health
 
@@ -549,8 +557,7 @@ Response sukses:
 Kegunaan:
 
 - ambil list event
-- bisa juga dipakai filter event tertentu
-- detail event by `id` atau `slug` juga pakai endpoint ini
+- bisa juga dipakai filter list event tertentu
 
 Expected input:
 
@@ -558,11 +565,18 @@ Expected input:
 - body: none
 - query possible:
   - `id` UUID
-  - `slug` string
+  - `slug` string exact match
+  - `slugLike` string contains search
+  - `nameLike` string contains search
+  - `descriptionLike` string contains search
+  - `venueLike` string contains search
+  - `addressLike` string contains search
   - `organizerId` UUID
   - `locationId` UUID
   - `categoryId` UUID
   - `status` enum: `DRAFT` | `PUBLISHED` | `CANCELED` | `COMPLETED`
+  - `sortBy` enum: `name` | `slug` | `venue` | `address` | `startAt` | `endAt` | `createdAt` | `updatedAt`
+  - `sortOrder` enum: `asc` | `desc`
   - `page` number, default `1`
   - `limit` number, default `10`, max `100`
 
@@ -571,16 +585,18 @@ Catatan:
 - `locationId` saat ini dipetakan ke field `cityId`
 - semua query opsional
 - query bisa digabung
+- semua field `...Like` pakai contains case-insensitive
+- default sorting: `createdAt desc`
 
 Contoh:
 
 ```txt
 GET /api/event
-GET /api/event?id=<event_uuid>
-GET /api/event?slug=derby-night-1234
 GET /api/event?organizerId=<organizer_uuid>
 GET /api/event?locationId=<city_uuid>&categoryId=<category_uuid>
 GET /api/event?status=PUBLISHED
+GET /api/event?nameLike=derby
+GET /api/event?venueLike=stadium&sortBy=startAt&sortOrder=asc
 GET /api/event?page=2&limit=10
 ```
 
@@ -629,6 +645,120 @@ Response sukses:
     "limit": 10,
     "total": 1,
     "totalPages": 1
+  }
+}
+```
+
+### `GET /api/event/:id`
+
+Kegunaan:
+
+- ambil detail satu event berdasarkan `id`
+
+Expected input:
+
+- params:
+  - `id` UUID event id
+- query: none
+- body: none
+
+Auth:
+
+- tidak perlu
+
+Response sukses:
+
+```json
+{
+  "message": "Event fetched successfully",
+  "data": {
+    "id": "EVENT_UUID",
+    "organizerId": "ORGANIZER_UUID",
+    "categoryId": "CATEGORY_UUID",
+    "cityId": "CITY_UUID",
+    "name": "Derby Night",
+    "slug": "derby-night-1234",
+    "description": "Big match for weekend crowd",
+    "bannerUrl": "https://res.cloudinary.com/.../banner.jpg",
+    "venue": "Main Stadium",
+    "address": "Jl. Stadion No. 10",
+    "startAt": "2026-05-10T19:00:00.000Z",
+    "endAt": "2026-05-10T22:00:00.000Z",
+    "status": "DRAFT",
+    "ticketTypes": [
+      {
+        "id": "TICKET_TYPE_UUID_1",
+        "eventId": "EVENT_UUID",
+        "name": "VIP",
+        "price": 250000,
+        "quota": 100,
+        "isActive": true,
+        "isSoldOut": false,
+        "isDeleted": false,
+        "createdAt": "2026-04-28T08:00:00.000Z",
+        "updatedAt": "2026-04-28T08:00:00.000Z"
+      }
+    ],
+    "createdAt": "2026-04-28T08:00:00.000Z",
+    "updatedAt": "2026-04-28T08:00:00.000Z",
+    "deletedAt": null
+  }
+}
+```
+
+### `GET /api/event/slug/:slug`
+
+Kegunaan:
+
+- ambil detail satu event berdasarkan `slug`
+
+Expected input:
+
+- params:
+  - `slug` string
+- query: none
+- body: none
+
+Auth:
+
+- tidak perlu
+
+Response sukses:
+
+```json
+{
+  "message": "Event fetched successfully",
+  "data": {
+    "id": "EVENT_UUID",
+    "organizerId": "ORGANIZER_UUID",
+    "categoryId": "CATEGORY_UUID",
+    "cityId": "CITY_UUID",
+    "name": "Derby Night",
+    "slug": "derby-night-1234",
+    "description": "Big match for weekend crowd",
+    "bannerUrl": "https://res.cloudinary.com/.../banner.jpg",
+    "venue": "Main Stadium",
+    "address": "Jl. Stadion No. 10",
+    "startAt": "2026-05-10T19:00:00.000Z",
+    "endAt": "2026-05-10T22:00:00.000Z",
+    "status": "DRAFT",
+    "ticketTypes": [
+      {
+        "id": "TICKET_TYPE_UUID_1",
+        "eventId": "EVENT_UUID",
+        "name": "VIP",
+        "price": 250000,
+        "quota": 100,
+        "isActive": true,
+        "isSoldOut": false,
+        "isDeleted": false,
+        "createdAt": "2026-04-28T08:00:00.000Z",
+        "updatedAt": "2026-04-28T08:00:00.000Z"
+      }
+    ],
+    "createdAt": "2026-04-28T08:00:00.000Z",
+    "updatedAt": "2026-04-28T08:00:00.000Z",
+    "deletedAt": null
   }
 }
 ```
@@ -1000,9 +1130,161 @@ Response sukses:
 }
 ```
 
-## City Endpoints
+## Location Endpoints
 
-### `GET /api/cities`
+### `GET /api/locations/countries`
+
+Kegunaan:
+
+- ambil list country beserta provinces dan cities
+
+Expected input:
+
+- params: none
+- body: none
+- query possible:
+  - `id` UUID
+  - `code` string
+  - `name` string
+  - `codeLike` string contains search
+  - `nameLike` string contains search
+  - `sortBy` enum: `name` | `code` | `createdAt` | `updatedAt`
+  - `sortOrder` enum: `asc` | `desc`
+
+Catatan:
+
+- semua query opsional
+- `name` dan `nameLike` pakai contains case-insensitive
+- `code` pakai equals case-insensitive
+- `codeLike` pakai contains case-insensitive
+- default sorting: `name asc`
+- response include `provinces` dan nested `cities`
+
+Contoh:
+
+```txt
+GET /api/locations/countries
+GET /api/locations/countries?id=<country_uuid>
+GET /api/locations/countries?name=england
+GET /api/locations/countries?code=ENG
+GET /api/locations/countries?nameLike=land
+GET /api/locations/countries?codeLike=EN&sortBy=code&sortOrder=desc
+```
+
+Auth:
+
+- tidak perlu
+
+Response sukses:
+
+```json
+{
+  "message": "Countries fetched successfully",
+  "data": [
+    {
+      "id": "COUNTRY_UUID",
+      "name": "England",
+      "code": "ENG",
+      "createdAt": "2026-04-07T00:00:00.000Z",
+      "updatedAt": "2026-04-07T00:00:00.000Z",
+      "provinces": [
+        {
+          "id": "PROVINCE_UUID",
+          "countryId": "COUNTRY_UUID",
+          "name": "Greater London",
+          "code": "LDN",
+          "createdAt": "2026-04-07T00:00:00.000Z",
+          "updatedAt": "2026-04-07T00:00:00.000Z",
+          "cities": [
+            {
+              "id": "CITY_UUID",
+              "provinceId": "PROVINCE_UUID",
+              "name": "London",
+              "code": "LON",
+              "createdAt": "2026-04-07T00:00:00.000Z",
+              "updatedAt": "2026-04-07T00:00:00.000Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### `GET /api/locations/provinces`
+
+Kegunaan:
+
+- ambil list province beserta cities
+
+Expected input:
+
+- params: none
+- body: none
+- query possible:
+  - `id` UUID
+  - `countryId` UUID
+  - `code` string
+  - `name` string
+  - `codeLike` string contains search
+  - `nameLike` string contains search
+  - `sortBy` enum: `name` | `code` | `createdAt` | `updatedAt`
+  - `sortOrder` enum: `asc` | `desc`
+
+Catatan:
+
+- semua query opsional
+- `name` dan `nameLike` pakai contains case-insensitive
+- `code` pakai equals case-insensitive
+- `codeLike` pakai contains case-insensitive
+- default sorting: `name asc`
+- response include `cities`
+
+Contoh:
+
+```txt
+GET /api/locations/provinces
+GET /api/locations/provinces?countryId=<country_uuid>
+GET /api/locations/provinces?name=london
+GET /api/locations/provinces?code=LDN
+GET /api/locations/provinces?nameLike=london
+GET /api/locations/provinces?sortBy=createdAt&sortOrder=desc
+```
+
+Auth:
+
+- tidak perlu
+
+Response sukses:
+
+```json
+{
+  "message": "Provinces fetched successfully",
+  "data": [
+    {
+      "id": "PROVINCE_UUID",
+      "countryId": "COUNTRY_UUID",
+      "name": "Greater London",
+      "code": "LDN",
+      "createdAt": "2026-04-07T00:00:00.000Z",
+      "updatedAt": "2026-04-07T00:00:00.000Z",
+      "cities": [
+        {
+          "id": "CITY_UUID",
+          "provinceId": "PROVINCE_UUID",
+          "name": "London",
+          "code": "LON",
+          "createdAt": "2026-04-07T00:00:00.000Z",
+          "updatedAt": "2026-04-07T00:00:00.000Z"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### `GET /api/locations/cities`
 
 Kegunaan:
 
@@ -1017,20 +1299,28 @@ Expected input:
   - `provinceId` UUID
   - `code` string
   - `name` string
+  - `codeLike` string contains search
+  - `nameLike` string contains search
+  - `sortBy` enum: `name` | `code` | `createdAt` | `updatedAt`
+  - `sortOrder` enum: `asc` | `desc`
 
 Catatan:
 
 - semua query opsional
-- `name` pakai contains case-insensitive
+- `name` dan `nameLike` pakai contains case-insensitive
 - `code` pakai equals case-insensitive
+- `codeLike` pakai contains case-insensitive
+- default sorting: `name asc`
 
 Contoh:
 
 ```txt
-GET /api/cities
-GET /api/cities?provinceId=<province_uuid>
-GET /api/cities?name=jakarta
-GET /api/cities?code=JKT
+GET /api/locations/cities
+GET /api/locations/cities?provinceId=<province_uuid>
+GET /api/locations/cities?name=jakarta
+GET /api/locations/cities?code=JKT
+GET /api/locations/cities?nameLike=kar
+GET /api/locations/cities?sortBy=code&sortOrder=desc
 ```
 
 Auth:
@@ -1070,11 +1360,15 @@ Expected input:
 - query possible:
   - `id` UUID
   - `name` string
+  - `nameLike` string contains search
+  - `sortBy` enum: `name` | `createdAt` | `updatedAt`
+  - `sortOrder` enum: `asc` | `desc`
 
 Catatan:
 
 - semua query opsional
-- `name` pakai contains case-insensitive
+- `name` dan `nameLike` pakai contains case-insensitive
+- default sorting: `name asc`
 
 Contoh:
 
@@ -1082,6 +1376,8 @@ Contoh:
 GET /api/categories
 GET /api/categories?id=<category_uuid>
 GET /api/categories?name=football
+GET /api/categories?nameLike=league
+GET /api/categories?sortBy=updatedAt&sortOrder=desc
 ```
 
 Auth:
@@ -1100,6 +1396,218 @@ Response sukses:
       "createdAt": "2026-04-07T00:00:00.000Z",
       "updatedAt": "2026-04-07T00:00:00.000Z",
       "deletedAt": null
+    }
+  ]
+}
+```
+
+## Transaction Endpoints
+
+### Ringkasan Flow Transaksi
+
+- satu transaksi hanya untuk satu `ticketTypeId` dengan quantity tetap `1`
+- satu user tidak bisa punya transaksi aktif atau transaksi selesai untuk event yang sama
+- transaksi bisa pakai `voucher`, `coupon`, dan `point` secara bersamaan
+- `voucher` dan `coupon` masing-masing hanya satu kode per transaksi
+- `voucher` wajib cocok dengan `eventId` transaksi
+- `point` dipakai dengan rasio `1 point = 1 rupiah`
+- `coupon` dipakai dengan rasio `1 amount = 1 rupiah`
+- `voucher` dipakai dengan rasio `1 amount = 1 rupiah`
+- saat transaksi dibuat, quota `ticketType` langsung dikurangi
+- kalau quota sesudah transaksi jadi `0`, `isSoldOut` akan jadi `true`
+- transaksi pending expired setelah `2 jam`
+- saat transaksi expired, quota ticket, quota voucher, coupon, dan point yang kepakai akan dibalikin otomatis saat endpoint transaksi dipanggil lagi
+- setelah transaksi sukses dibuat, user akan dapat email untuk cek ongoing transaction di profile
+
+### `POST /api/transactions`
+
+Kegunaan:
+
+- buat transaksi baru untuk user login
+
+Expected input:
+
+- params: none
+- query: none
+- body:
+  - `eventId` UUID
+  - `ticketTypeId` UUID
+  - `voucherCode` string optional
+  - `couponId` UUID optional
+  - `pointsToUse` integer optional, minimum `0`
+
+Catatan:
+
+- quantity ticket selalu `1`
+- user tidak bisa transaksi ulang untuk event yang sama kalau masih punya transaksi `WAITING_FOR_PAYMENT`, `WAITING_FOR_ADMIN_CONFIRMATION`, atau `DONE`
+- kalau total diskon dan point menutupi semua harga tiket, transaksi akan langsung `DONE`
+- kalau masih ada sisa bayar, transaksi akan `WAITING_FOR_PAYMENT` dan punya `expiredAt` 2 jam dari waktu create
+
+Auth:
+
+- bearer token wajib
+
+Contoh body:
+
+```json
+{
+  "eventId": "EVENT_UUID",
+  "ticketTypeId": "TICKET_TYPE_UUID",
+  "voucherCode": "EARLYBIRD10",
+  "couponId": "COUPON_UUID",
+  "pointsToUse": 15000
+}
+```
+
+Response sukses:
+
+```json
+{
+  "message": "Transaction created successfully",
+  "data": {
+    "id": "TRANSACTION_UUID",
+    "userId": "USER_UUID",
+    "eventId": "EVENT_UUID",
+    "couponId": "COUPON_UUID",
+    "voucherId": "VOUCHER_UUID",
+    "status": "WAITING_FOR_PAYMENT",
+    "totalAmount": 100000,
+    "couponAmount": 10000,
+    "voucherAmount": 20000,
+    "pointsAmount": 15000,
+    "finalAmount": 55000,
+    "expiredAt": "2026-04-29T12:00:00.000Z",
+    "transactionItems": [
+      {
+        "id": "TRANSACTION_ITEM_UUID",
+        "ticketTypeId": "TICKET_TYPE_UUID",
+        "quantity": 1,
+        "price": 100000,
+        "subtotal": 100000
+      }
+    ]
+  }
+}
+```
+
+### `GET /api/transactions/me`
+
+Kegunaan:
+
+- ambil list transaksi milik user login
+
+Expected input:
+
+- params: none
+- body: none
+- query possible:
+  - `status` enum: `WAITING_FOR_PAYMENT` | `WAITING_FOR_ADMIN_CONFIRMATION` | `DONE` | `REJECTED` | `EXPIRED` | `CANCELED`
+
+Catatan:
+
+- semua query opsional
+- sebelum data diambil, sistem akan sinkronkan transaksi expired dulu
+
+Auth:
+
+- bearer token wajib
+
+Contoh:
+
+```txt
+GET /api/transactions/me
+GET /api/transactions/me?status=WAITING_FOR_PAYMENT
+```
+
+### `GET /api/transactions/vouchers/check`
+
+Kegunaan:
+
+- cek voucher valid atau tidak untuk event tertentu
+- cocok buat debounce di frontend sebelum submit transaksi
+
+Expected input:
+
+- params: none
+- body: none
+- query:
+  - `eventId` UUID
+  - `code` string
+
+Catatan:
+
+- voucher harus cocok dengan `eventId`
+- voucher harus masih dalam window `startAt` dan `endAt`
+- voucher harus masih punya quota
+
+Auth:
+
+- bearer token wajib
+
+Contoh:
+
+```txt
+GET /api/transactions/vouchers/check?eventId=<event_uuid>&code=EARLYBIRD10
+```
+
+Response sukses:
+
+```json
+{
+  "message": "Voucher is valid",
+  "data": {
+    "id": "VOUCHER_UUID",
+    "eventId": "EVENT_UUID",
+    "code": "EARLYBIRD10",
+    "amount": 20000,
+    "quota": 10,
+    "startAt": "2026-04-20T00:00:00.000Z",
+    "endAt": "2026-05-01T00:00:00.000Z"
+  }
+}
+```
+
+### `GET /api/transactions/coupons/me`
+
+Kegunaan:
+
+- ambil coupon milik user login yang masih available
+- cocok buat dropdown atau selector coupon di frontend
+
+Expected input:
+
+- params: none
+- query: none
+- body: none
+
+Catatan:
+
+- hanya return coupon yang belum dipakai dan belum expired
+- endpoint ini dipakai frontend buat menampilkan pilihan coupon yang nanti dikirim sebagai `couponId`
+
+Auth:
+
+- bearer token wajib
+
+Contoh:
+
+```txt
+GET /api/transactions/coupons/me
+```
+
+Response sukses:
+
+```json
+{
+  "message": "Coupons fetched successfully",
+  "data": [
+    {
+      "id": "COUPON_UUID",
+      "userId": "USER_UUID",
+      "amount": 10000,
+      "source": "REFERRAL_REGISTER",
+      "usedAt": null,
+      "expiresAt": "2026-05-20T00:00:00.000Z"
     }
   ]
 }
@@ -1130,11 +1638,21 @@ Message yang sering muncul:
 
 1. `POST /api/auth/login` sebagai organizer.
 2. `GET /api/categories` untuk ambil category id.
-3. `GET /api/cities` untuk ambil city id.
+3. `GET /api/locations/cities` untuk ambil city id.
 4. `POST /api/event/organizer/:id` untuk create event.
 5. `GET /api/event?organizerId=<organizer_id>` untuk cek event organizer.
 6. `PUT /api/event/:id` untuk update event.
 7. `DELETE /api/event/:id` untuk soft delete event.
+
+## Testing Flow Cepat Buat Transaksi
+
+1. `POST /api/auth/login` sebagai customer.
+2. `GET /api/event?status=PUBLISHED` untuk ambil `eventId`.
+3. `GET /api/event/:id` untuk lihat `ticketTypeId` yang mau dibeli.
+4. Optional: `GET /api/transactions/vouchers/check` untuk cek voucher event.
+5. Optional: `GET /api/transactions/coupons/me` untuk pilih coupon.
+6. `POST /api/transactions` untuk create transaksi.
+7. `GET /api/transactions/me?status=WAITING_FOR_PAYMENT` untuk lihat ongoing transaction di profile.
 
 ## File Terkait
 
@@ -1142,5 +1660,6 @@ Message yang sering muncul:
 - `src/modules/auth/*`
 - `src/modules/user/*`
 - `src/modules/event/*`
-- `src/modules/city/*`
+- `src/modules/location/*`
 - `src/modules/category/*`
+- `src/modules/transaction/*`

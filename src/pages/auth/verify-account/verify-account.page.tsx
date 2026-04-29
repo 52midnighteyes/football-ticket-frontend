@@ -1,11 +1,11 @@
 import { verifyUser } from "@/api/auth/auth.api";
+import { getDefaultRouteForUser } from "@/lib/user-route";
 import { useAuthStore } from "@/store/auth.store";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { toast } from "sonner";
 import { jwtDecode } from "jwt-decode";
-import type { IUserSession } from "@/api/auth/auth.interface";
+import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import RedirectCard from "@/components/redirect-card";
 
@@ -17,9 +17,9 @@ export default function VerifyAccountPage() {
 
   const session = useAuthStore((state) => state.user);
   const isHydrated = useAuthStore((state) => state.isHydrated);
-  const isActiveSession = isHydrated && !!session;
   const navigate = useNavigate();
   const setSession = useAuthStore((state) => state.setSession);
+  const fallbackRoute = getDefaultRouteForUser(session);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -52,55 +52,58 @@ export default function VerifyAccountPage() {
       if (!token) {
         finishWithRedirect(
           "Invalid verification link. Please request a new verification email.",
-          "/",
+          fallbackRoute,
           true
         );
         return;
       }
 
-      if (!isActiveSession || !session) {
-        finishWithRedirect(
-          "Please login to your account to verify your email.",
-          "/login",
-          true
-        );
-        return;
-      }
+      if (session) {
+        try {
+          const decodedToken = jwtDecode<{ id?: string }>(token);
 
-      let decoded: IUserSession;
-
-      try {
-        decoded = jwtDecode(token);
-      } catch {
-        finishWithRedirect(
-          "Invalid verification link. Please request a new verification email.",
-          "/",
-          true
-        );
-        return;
-      }
-
-      if (session.id !== decoded.id) {
-        finishWithRedirect(
-          "Unauthorized access. Please login to the correct account to verify.",
-          "/",
-          true
-        );
-        return;
-      }
-
-      if (session.isVerified) {
-        finishWithRedirect("Your account is already verified.", "/", true);
-        return;
+          if (!decodedToken.id || decodedToken.id !== session.id) {
+            finishWithRedirect(
+              "This verification link belongs to a different account. Please log in with the correct account first.",
+              fallbackRoute,
+              true
+            );
+            return;
+          }
+        } catch {
+          finishWithRedirect(
+            "Invalid verification link. Please request a new verification email.",
+            fallbackRoute,
+            true
+          );
+          return;
+        }
       }
 
       try {
         const response = await verifyUser(token);
-        if (!response.data || isCancelled) return;
-        setSession(response.data.user, response.data.accessToken);
+        if (isCancelled) return;
+
+        if (!response.data) {
+          finishWithRedirect(
+            "Verification failed. Please request a new verification email.",
+            fallbackRoute,
+            true
+          );
+          return;
+        }
+
+        const successRedirectPath = session
+          ? getDefaultRouteForUser(response.data.user)
+          : "/login";
+
+        if (session) {
+          setSession(response.data.user, response.data.accessToken);
+        }
+
         finishWithRedirect(
           "Your account has been successfully verified. You can now access all features.",
-          "/",
+          successRedirectPath,
           false
         );
       } catch (error) {
@@ -109,16 +112,16 @@ export default function VerifyAccountPage() {
         if (error instanceof axios.AxiosError && error.response) {
           finishWithRedirect(
             error.response.data.message ||
-              "AXIOS: Verification failed. Please request a new verification email.",
-            "/",
+              "Verification failed. Please request a new verification email.",
+            fallbackRoute,
             true
           );
           return;
         }
 
         finishWithRedirect(
-          "NORMAL FALLBACK: Verification failed. Please request a new verification email.",
-          "/",
+          "Verification failed. Please request a new verification email.",
+          fallbackRoute,
           true
         );
       }
@@ -143,15 +146,6 @@ export default function VerifyAccountPage() {
       <div className="flex min-h-screen w-full flex-col items-center justify-center gap-5 bg-background px-10 pt-10">
         <Spinner className="scale-200" />
       </div>
-    );
-  }
-
-  if (!isActiveSession) {
-    return (
-      <RedirectCard
-        title="You need to log in"
-        description={errorMessage ?? "Please login to continue."}
-      />
     );
   }
 

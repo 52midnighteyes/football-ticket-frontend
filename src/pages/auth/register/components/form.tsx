@@ -48,7 +48,12 @@ export default function RegisterForm() {
     referrerCode: "",
   };
 
-  const onSubmit = async (values: IRegisterUserParams) => {
+  const onSubmit = async (
+    values: IRegisterUserParams,
+    { setStatus }: { setStatus: (status?: string) => void },
+  ) => {
+    setStatus(undefined);
+
     try {
       await registerUser(values);
       toast.success(
@@ -57,10 +62,13 @@ export default function RegisterForm() {
       navigate("/login");
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        toast.error(error.response?.data?.message || "Registration failed");
+        const errorMessage = error.response?.data?.message || "Registration failed";
+        setStatus(errorMessage);
+        toast.error(errorMessage);
         return;
       }
 
+      setStatus("Registration failed");
       toast.error("Registration failed");
     }
   };
@@ -162,7 +170,7 @@ export default function RegisterForm() {
       validationSchema={registerUserSchema}
       onSubmit={onSubmit}
     >
-      {({ isSubmitting, setFieldValue, values, errors }) => (
+      {({ isSubmitting, setFieldValue, values, errors, status }) => (
         <Form className="flex min-h-120 w-full min-w-70 max-w-105 flex-col items-center gap-4 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-md">
           <div className="w-full">
             <Label htmlFor="email" className="mb-2 block text-sm font-medium">
@@ -344,6 +352,12 @@ export default function RegisterForm() {
                 </div>
               )}
           </div>
+
+          {status ? (
+            <div className="w-full rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {status}
+            </div>
+          ) : null}
 
           <Button
             type="submit"

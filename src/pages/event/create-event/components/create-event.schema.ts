@@ -1,5 +1,5 @@
 import * as Yup from "yup";
-import type { EventStatus } from "@/api/event/event.interface";
+import type { EventStatus, IEvent } from "@/api/event/event.interface";
 
 const allowedStatuses: EventStatus[] = [
   "DRAFT",
@@ -12,6 +12,7 @@ const allowedMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 export interface ICreateTicketTypeFormValues {
+  id?: string;
   name: string;
   price: string;
   quota: string;
@@ -53,7 +54,31 @@ export const createEventInitialValues: ICreateEventFormValues = {
   ],
 };
 
-export const createEventSchema = Yup.object({
+const buildBannerSchema = (isRequired: boolean) => {
+  const schema = Yup.mixed<File>()
+    .nullable()
+    .test({
+      name: "banner-validation",
+      message: isRequired
+        ? "Banner must be JPG, PNG, or WEBP and max 2MB."
+        : "Banner must be JPG, PNG, or WEBP and max 2MB when provided.",
+      test(value) {
+        if (!value) {
+          return !isRequired;
+        }
+
+        if (!(value instanceof File)) {
+          return false;
+        }
+
+        return allowedMimeTypes.has(value.type) && value.size <= MAX_FILE_SIZE;
+      },
+    });
+
+  return isRequired ? schema.required("Banner image is required") : schema;
+};
+
+const baseEventSchema = {
   categoryId: Yup.string().trim().required("Category is required"),
   cityId: Yup.string().trim().required("City is required"),
   name: Yup.string().trim().required("Event name is required"),
@@ -82,22 +107,10 @@ export const createEventSchema = Yup.object({
   status: Yup.mixed<EventStatus>()
     .oneOf(allowedStatuses, "Invalid event status")
     .required("Status is required"),
-  bannerUrl: Yup.mixed<File>()
-    .required("Banner image is required")
-    .test({
-      name: "banner-validation",
-      message: "Banner must be JPG, PNG, or WEBP and max 2MB.",
-      test(value) {
-        if (!(value instanceof File)) {
-          return false;
-        }
-
-        return allowedMimeTypes.has(value.type) && value.size <= MAX_FILE_SIZE;
-      },
-    }),
   ticketTypes: Yup.array()
     .of(
       Yup.object({
+        id: Yup.string().trim().optional(),
         name: Yup.string().trim().required("Ticket name is required"),
         price: Yup.string()
           .required("Price is required")
@@ -138,4 +151,46 @@ export const createEventSchema = Yup.object({
     )
     .min(1, "At least one ticket type is required")
     .required("At least one ticket type is required"),
+};
+
+export const createEventSchema = Yup.object({
+  ...baseEventSchema,
+  bannerUrl: buildBannerSchema(true),
+});
+
+export const updateEventSchema = Yup.object({
+  ...baseEventSchema,
+  bannerUrl: buildBannerSchema(false),
+});
+
+export const mapEventToFormValues = (
+  event: IEvent,
+): ICreateEventFormValues => ({
+  categoryId: event.categoryId,
+  cityId: event.cityId,
+  name: event.name,
+  description: event.description,
+  venue: event.venue,
+  address: event.address,
+  startAt: event.startAt.slice(0, 16),
+  endAt: event.endAt.slice(0, 16),
+  status: event.status,
+  bannerUrl: null,
+  ticketTypes:
+    event.ticketTypes && event.ticketTypes.length > 0
+      ? event.ticketTypes.map((ticketType) => ({
+          id: ticketType.id,
+          name: ticketType.name,
+          price: String(ticketType.price),
+          quota: String(ticketType.quota),
+          isActive: ticketType.isActive ?? true,
+        }))
+      : [
+          {
+            name: "",
+            price: "",
+            quota: "",
+            isActive: true,
+          },
+        ],
 });

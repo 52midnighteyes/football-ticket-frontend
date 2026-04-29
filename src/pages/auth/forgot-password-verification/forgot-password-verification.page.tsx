@@ -106,7 +106,7 @@ export default function ForgotPasswordVerificationPage() {
     return (
       <RedirectCard
         title="You are currently logged in"
-        description="ou need to log out before you can reset your password."
+        description="You need to log out before you can reset your password."
       />
     );
   }
@@ -115,7 +115,7 @@ export default function ForgotPasswordVerificationPage() {
     return (
       <RedirectCard
         title="We have reset your password"
-        description="You can now login with your new password. don't lose it again :)!"
+        description="You can now log in with your new password."
       />
     );
   }
