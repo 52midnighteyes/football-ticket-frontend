@@ -1553,7 +1553,6 @@ Expected input:
 Catatan:
 
 - quantity ticket selalu `1`
-- event hanya bisa dibeli kalau masih `PUBLISHED`, belum dihapus, dan `startAt` masih lebih besar dari waktu request sekarang
 - user tidak bisa transaksi ulang untuk event yang sama kalau masih punya transaksi `WAITING_FOR_PAYMENT`, `WAITING_FOR_ADMIN_CONFIRMATION`, atau `DONE`
 - kalau `usePoints = true`, backend akan otomatis memakai semua point available sampai batas maksimal yang bisa mengurangi tagihan
 - kalau total diskon dan point menutupi semua harga tiket, transaksi akan langsung `DONE`
@@ -1659,8 +1658,6 @@ Response error yang umum:
   "message": "Event not found or not purchasable"
 }
 ```
-
-Message ini juga dipakai kalau event sudah masuk waktu mulai, karena backend sekarang hanya menganggap event purchasable saat `startAt > now`.
 
 ```json
 {

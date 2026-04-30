@@ -20,9 +20,9 @@ export default function UserProfilePage() {
 
   if (!isHydrated || !user) {
     return (
-      <div className="min-h-screen bg-muted/30 px-6 pt-28 pb-10 lg:px-20">
-        <Card className="mx-auto w-full max-w-3xl border-border shadow-sm">
-          <CardContent>
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(210,82,32,0.12),_transparent_34%),linear-gradient(180deg,_rgba(245,247,244,1)_0%,_rgba(236,241,236,1)_100%)] px-6 pt-28 pb-12 lg:px-16">
+        <Card className="mx-auto w-full max-w-5xl border-border/80 bg-card shadow-sm">
+          <CardContent className="py-8">
             <p className="text-sm text-muted-foreground">Loading profile...</p>
           </CardContent>
         </Card>
@@ -31,8 +31,8 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 px-6 pt-28 pb-10 lg:px-20">
-      <div className="mx-auto w-full max-w-3xl">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(210,82,32,0.12),_transparent_34%),linear-gradient(180deg,_rgba(245,247,244,1)_0%,_rgba(236,241,236,1)_100%)] px-6 pt-28 pb-12 lg:px-16">
+      <div className="mx-auto w-full max-w-6xl">
         <ProfileCard user={user} />
       </div>
     </div>

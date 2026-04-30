@@ -67,6 +67,7 @@ export const useAuthStore = create<IAuthStore>()(
       name: "auth-storage",
       partialize: (state) => ({
         user: state.user,
+        accessToken: state.accessToken,
       }),
       onRehydrateStorage: () => (state, error) => {
         if (error) {
