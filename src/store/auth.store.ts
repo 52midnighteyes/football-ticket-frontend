@@ -9,6 +9,8 @@ export interface IUserParams {
   role: string;
   avatarUrl: string | null;
   isVerified: boolean;
+  referralCode?: string;
+  points?: number;
 }
 
 type UserPayload = IUserParams | { user: IUserParams };

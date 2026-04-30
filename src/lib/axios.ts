@@ -12,6 +12,36 @@ export interface IRefreshTokenResponse {
     accessToken: string;
   };
 }
+
+function isRefreshRequest(url?: string) {
+  return url?.includes("/auth/refresh-token") ?? false;
+}
+
+function shouldSkipAutoRefresh(url?: string) {
+  if (!url) {
+    return false;
+  }
+
+  return (
+    isRefreshRequest(url) ||
+    url.includes("/auth/login") ||
+    url.includes("/auth/register") ||
+    url.includes("/auth/request-forgot-password") ||
+    url.includes("/auth/forgot-password/") ||
+    url.includes("/auth/verify/")
+  );
+}
+
+function clearPersistedSession() {
+  useAuthStore.getState().clearSession();
+
+  try {
+    useAuthStore.persist.clearStorage();
+  } catch (error) {
+    console.error("failed to clear persisted auth storage", error);
+  }
+}
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 10000,
@@ -21,9 +51,8 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const accessToken = useAuthStore.getState().accessToken;
-    const isRefreshRequest = config.url?.includes("/auth/refresh-token");
 
-    if (accessToken && !isRefreshRequest) {
+    if (accessToken && !isRefreshRequest(config.url)) {
       config.headers.set("Authorization", `Bearer ${accessToken}`);
     }
 
@@ -42,11 +71,9 @@ api.interceptors.response.use(
     }
 
     const status = error.response?.status;
-    const isRefreshRequest = originalRequest.url?.includes(
-      "/auth/refresh-token",
-    );
+    const skipAutoRefresh = shouldSkipAutoRefresh(originalRequest.url);
 
-    if (status === 401 && !originalRequest._retry && !isRefreshRequest) {
+    if (status === 401 && !originalRequest._retry && !skipAutoRefresh) {
       originalRequest._retry = true;
 
       try {
@@ -63,9 +90,9 @@ api.interceptors.response.use(
         );
 
         return api(originalRequest);
-      } catch (refreshError) {
-        useAuthStore.getState().clearSession();
-        return Promise.reject(refreshError);
+      } catch {
+        clearPersistedSession();
+        return Promise.reject(error);
       }
     }
 

@@ -27,6 +27,7 @@ credentials: include
 Role guard yang aktif saat ini:
 
 - write event: `ORGANIZER` atau `ADMIN`
+- buy ticket / create transaction: `CUSTOMER`
 
 ## Ringkasan Endpoint Aktif
 
@@ -57,10 +58,18 @@ Role guard yang aktif saat ini:
 - `GET /api/locations/provinces`
 - `GET /api/locations/cities`
 - `GET /api/categories`
+- `GET /api/tickets`
+- `GET /api/tickets/attendance-stats`
+- `PATCH /api/tickets/check-in`
 - `POST /api/transactions`
 - `GET /api/transactions/me`
+- `GET /api/transactions/organizer/me`
+- `GET /api/transactions/organizer/revenue`
 - `GET /api/transactions/vouchers/check`
 - `GET /api/transactions/coupons/me`
+- `GET /api/transactions/points/me`
+- `PATCH /api/transactions/:id/payment-proof`
+- `PATCH /api/transactions/:id/status`
 
 ## Health
 
@@ -192,6 +201,36 @@ Response sukses:
       "isVerified": false
     }
   }
+}
+```
+
+Response error yang umum:
+
+- `400 Bad Request`
+
+```json
+{
+  "message": "Email format is invalid"
+}
+```
+
+```json
+{
+  "message": "Email is required"
+}
+```
+
+```json
+{
+  "message": "Password is required"
+}
+```
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Invalid email or password"
 }
 ```
 
@@ -448,7 +487,8 @@ Response sukses:
     "lastName": "Doe",
     "role": "ORGANIZER",
     "avatarUrl": null,
-    "isVerified": true
+    "isVerified": true,
+    "referralCode": "JOAB1234"
   }
 }
 ```
@@ -882,6 +922,74 @@ Response sukses:
     "updatedAt": "2026-04-28T08:00:00.000Z",
     "deletedAt": null
   }
+}
+```
+
+Response error yang umum:
+
+- `400 Bad Request`
+
+```json
+{
+  "message": "Banner image is required"
+}
+```
+
+```json
+{
+  "message": "Organizer ID must be a valid UUID"
+}
+```
+
+```json
+{
+  "message": "Category ID must be a valid UUID"
+}
+```
+
+```json
+{
+  "message": "City ID must be a valid UUID"
+}
+```
+
+```json
+{
+  "message": "End date must be after start date"
+}
+```
+
+```json
+{
+  "message": "At least one ticket type is required"
+}
+```
+
+```json
+{
+  "message": "Invalid file type. Only JPG, PNG, and WEBP are allowed."
+}
+```
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+- `403 Forbidden`
+
+```json
+{
+  "message": "Forbidden"
+}
+```
+
+```json
+{
+  "message": "You are not allowed to create this event"
 }
 ```
 
@@ -1408,14 +1516,20 @@ Response sukses:
 - satu transaksi hanya untuk satu `ticketTypeId` dengan quantity tetap `1`
 - satu user tidak bisa punya transaksi aktif atau transaksi selesai untuk event yang sama
 - transaksi bisa pakai `voucher`, `coupon`, dan `point` secara bersamaan
-- `voucher` dan `coupon` masing-masing hanya satu kode per transaksi
+- `voucher` pakai kode, `coupon` pakai `couponId`
 - `voucher` wajib cocok dengan `eventId` transaksi
 - `point` dipakai dengan rasio `1 point = 1 rupiah`
 - `coupon` dipakai dengan rasio `1 amount = 1 rupiah`
 - `voucher` dipakai dengan rasio `1 amount = 1 rupiah`
 - saat transaksi dibuat, quota `ticketType` langsung dikurangi
 - kalau quota sesudah transaksi jadi `0`, `isSoldOut` akan jadi `true`
-- transaksi pending expired setelah `2 jam`
+- saat transaksi pertama kali dibuat dan masih `WAITING_FOR_PAYMENT`, `expiredAt` bernilai `2 jam` dari waktu create
+- user hanya bisa upload bukti transfer saat status masih `WAITING_FOR_PAYMENT`
+- setelah bukti transfer berhasil diupload, status transaksi jadi `WAITING_FOR_ADMIN_CONFIRMATION`
+- saat masuk `WAITING_FOR_ADMIN_CONFIRMATION`, `expiredAt` akan digeser jadi `3 jam` dari waktu upload sebagai window follow-up untuk organizer
+- organizer atau admin bisa review transaksi yang statusnya `WAITING_FOR_ADMIN_CONFIRMATION`
+- kalau transaksi di-`REJECTED`, quota ticket, voucher, coupon, dan point akan dikembalikan lagi
+- kalau transaksi di-accept, backend akan issue ticket dan kirim kode ticket lewat email
 - saat transaksi expired, quota ticket, quota voucher, coupon, dan point yang kepakai akan dibalikin otomatis saat endpoint transaksi dipanggil lagi
 - setelah transaksi sukses dibuat, user akan dapat email untuk cek ongoing transaction di profile
 
@@ -1434,18 +1548,22 @@ Expected input:
   - `ticketTypeId` UUID
   - `voucherCode` string optional
   - `couponId` UUID optional
-  - `pointsToUse` integer optional, minimum `0`
+  - `usePoints` boolean optional, default `false`
 
 Catatan:
 
 - quantity ticket selalu `1`
+- event hanya bisa dibeli kalau masih `PUBLISHED`, belum dihapus, dan `startAt` masih lebih besar dari waktu request sekarang
 - user tidak bisa transaksi ulang untuk event yang sama kalau masih punya transaksi `WAITING_FOR_PAYMENT`, `WAITING_FOR_ADMIN_CONFIRMATION`, atau `DONE`
+- kalau `usePoints = true`, backend akan otomatis memakai semua point available sampai batas maksimal yang bisa mengurangi tagihan
 - kalau total diskon dan point menutupi semua harga tiket, transaksi akan langsung `DONE`
 - kalau masih ada sisa bayar, transaksi akan `WAITING_FOR_PAYMENT` dan punya `expiredAt` 2 jam dari waktu create
+- nilai `expiredAt` ini akan berubah lagi kalau user berhasil upload bukti transfer
 
 Auth:
 
 - bearer token wajib
+- role `CUSTOMER`
 
 Contoh body:
 
@@ -1455,7 +1573,7 @@ Contoh body:
   "ticketTypeId": "TICKET_TYPE_UUID",
   "voucherCode": "EARLYBIRD10",
   "couponId": "COUPON_UUID",
-  "pointsToUse": 15000
+  "usePoints": true
 }
 ```
 
@@ -1490,6 +1608,80 @@ Response sukses:
 }
 ```
 
+Response error yang umum:
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+- `403 Forbidden`
+
+```json
+{
+  "message": "Forbidden"
+}
+```
+
+- `400 Bad Request`
+
+```json
+{
+  "message": "Event ID must be a valid UUID"
+}
+```
+
+```json
+{
+  "message": "Ticket type ID must be a valid UUID"
+}
+```
+
+```json
+{
+  "message": "Coupon ID must be a valid UUID"
+}
+```
+
+```json
+{
+  "message": "Voucher is invalid"
+}
+```
+
+- `404 Not Found`
+
+```json
+{
+  "message": "Event not found or not purchasable"
+}
+```
+
+Message ini juga dipakai kalau event sudah masuk waktu mulai, karena backend sekarang hanya menganggap event purchasable saat `startAt > now`.
+
+```json
+{
+  "message": "Ticket type not found"
+}
+```
+
+- `409 Conflict`
+
+```json
+{
+  "message": "Ticket type is sold out"
+}
+```
+
+```json
+{
+  "message": "You already have an active or completed transaction for this event"
+}
+```
+
 ### `GET /api/transactions/me`
 
 Kegunaan:
@@ -1517,6 +1709,206 @@ Contoh:
 ```txt
 GET /api/transactions/me
 GET /api/transactions/me?status=WAITING_FOR_PAYMENT
+```
+
+### `GET /api/transactions/organizer/me`
+
+Kegunaan:
+
+- ambil list transaksi untuk semua event milik organizer login
+- cocok buat dashboard organizer untuk approval queue dan riwayat transaksi event
+
+Expected input:
+
+- params: none
+- body: none
+- query possible:
+  - `id` UUID transaction id
+  - `organizerId` UUID
+  - `eventId` UUID
+  - `userId` UUID buyer/customer id
+  - `status` enum: `WAITING_FOR_PAYMENT` | `WAITING_FOR_ADMIN_CONFIRMATION` | `DONE` | `REJECTED` | `EXPIRED` | `CANCELED`
+  - `eventNameLike` string contains search
+  - `buyerNameLike` string contains search ke `firstName` atau `lastName`
+  - `buyerEmailLike` string contains search
+  - `sortBy` enum: `createdAt` | `updatedAt` | `expiredAt` | `paymentProofUploadedAt` | `adminActionAt` | `totalAmount` | `finalAmount` | `status`
+  - `sortOrder` enum: `asc` | `desc`
+  - `page` number, default `1`
+  - `limit` number, default `10`, max `100`
+
+Catatan:
+
+- untuk role `ORGANIZER`, data otomatis dibatasi ke event milik organizer login
+- untuk role `ADMIN`, query `organizerId` bisa dipakai untuk filter organizer tertentu
+- semua query opsional
+- query bisa digabung
+- field `...Like` pakai contains case-insensitive
+- default sorting: `createdAt desc`
+- response include relasi `user`, `event`, `coupon`, `voucher`, `transactionItems`, `tickets`, dan `pointHistories`
+
+Auth:
+
+- bearer token wajib
+- role `ORGANIZER` atau `ADMIN`
+
+Contoh:
+
+```txt
+GET /api/transactions/organizer/me
+GET /api/transactions/organizer/me?status=WAITING_FOR_ADMIN_CONFIRMATION
+GET /api/transactions/organizer/me?eventId=<event_uuid>&status=DONE
+GET /api/transactions/organizer/me?buyerNameLike=john
+GET /api/transactions/organizer/me?buyerEmailLike=gmail.com&sortBy=paymentProofUploadedAt&sortOrder=asc
+GET /api/transactions/organizer/me?page=2&limit=20
+```
+
+Response sukses:
+
+```json
+{
+  "message": "Organizer transactions fetched successfully",
+  "data": [
+    {
+      "id": "TRANSACTION_UUID",
+      "userId": "USER_UUID",
+      "eventId": "EVENT_UUID",
+      "status": "WAITING_FOR_ADMIN_CONFIRMATION",
+      "totalAmount": 100000,
+      "couponAmount": 10000,
+      "voucherAmount": 20000,
+      "pointsAmount": 15000,
+      "finalAmount": 55000,
+      "paymentProofUrl": "https://res.cloudinary.com/.../payment-proof.jpg",
+      "paymentProofUploadedAt": "2026-04-30T02:00:00.000Z",
+      "expiredAt": "2026-04-30T05:00:00.000Z",
+      "user": {
+        "id": "USER_UUID",
+        "email": "customer@mail.com",
+        "firstName": "John",
+        "lastName": "Doe"
+      },
+      "event": {
+        "id": "EVENT_UUID",
+        "name": "Derby Night",
+        "organizerId": "ORGANIZER_UUID"
+      },
+      "transactionItems": [
+        {
+          "id": "TRANSACTION_ITEM_UUID",
+          "ticketTypeId": "TICKET_TYPE_UUID",
+          "quantity": 1,
+          "price": 100000,
+          "subtotal": 100000
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+### `GET /api/transactions/organizer/revenue`
+
+Kegunaan:
+
+- ambil data revenue agregat dari semua event milik organizer
+- response sudah disiapkan supaya gampang dipakai langsung di `Recharts`
+
+Expected input:
+
+- params: none
+- body: none
+- query possible:
+  - `groupBy` enum: `year` | `month` | `day`, default `year`
+  - `year` number
+  - `month` number `1-12`
+  - `organizerId` UUID
+
+Catatan:
+
+- untuk role `ORGANIZER`, data otomatis dibatasi ke event milik organizer login
+- untuk role `ADMIN`, query `organizerId` bisa dipakai untuk filter organizer tertentu
+- revenue hanya dihitung dari transaksi dengan status `DONE`
+- revenue dijumlah dari `finalAmount`
+- bucket waktu memakai `adminActionAt` saat ada, atau fallback ke `createdAt`
+- kalau `groupBy=month`, query `year` wajib
+- kalau `groupBy=day`, query `year` dan `month` wajib
+- response `items` berbentuk flat array dengan field `label`, `period`, dan `revenue`
+- untuk `month` dan `day`, period yang tidak punya transaksi tetap dikembalikan dengan revenue `0` supaya chart stabil
+
+Auth:
+
+- bearer token wajib
+- role `ORGANIZER` atau `ADMIN`
+
+Contoh:
+
+```txt
+GET /api/transactions/organizer/revenue
+GET /api/transactions/organizer/revenue?groupBy=month&year=2026
+GET /api/transactions/organizer/revenue?groupBy=day&year=2026&month=4
+```
+
+Response sukses per year:
+
+```json
+{
+  "message": "Revenue analytics fetched successfully",
+  "data": {
+    "groupBy": "year",
+    "year": null,
+    "month": null,
+    "totalRevenue": 23000000,
+    "items": [
+      {
+        "label": "2024",
+        "period": "2024",
+        "revenue": 12000000
+      },
+      {
+        "label": "2025",
+        "period": "2025",
+        "revenue": 11000000
+      }
+    ]
+  }
+}
+```
+
+Response sukses per month:
+
+```json
+{
+  "message": "Revenue analytics fetched successfully",
+  "data": {
+    "groupBy": "month",
+    "year": 2026,
+    "month": null,
+    "totalRevenue": 5400000,
+    "items": [
+      {
+        "label": "Jan",
+        "period": "2026-01",
+        "revenue": 1200000
+      },
+      {
+        "label": "Feb",
+        "period": "2026-02",
+        "revenue": 900000
+      },
+      {
+        "label": "Mar",
+        "period": "2026-03",
+        "revenue": 0
+      }
+    ]
+  }
+}
 ```
 
 ### `GET /api/transactions/vouchers/check`
@@ -1613,6 +2005,273 @@ Response sukses:
 }
 ```
 
+### `GET /api/transactions/points/me`
+
+Kegunaan:
+
+- ambil total point available milik user login
+- cocok buat toggle "use all points" di frontend
+
+Expected input:
+
+- params: none
+- query: none
+- body: none
+
+Catatan:
+
+- hanya menghitung point yang masih punya `pointLeft > 0`
+- hanya menghitung point yang belum expired
+
+Auth:
+
+- bearer token wajib
+
+Contoh:
+
+```txt
+GET /api/transactions/points/me
+```
+
+Response sukses:
+
+```json
+{
+  "message": "Available points fetched successfully",
+  "data": {
+    "totalAvailablePoints": 20000
+  }
+}
+```
+
+### `PATCH /api/transactions/:id/payment-proof`
+
+Kegunaan:
+
+- upload bukti transfer milik user login
+
+Expected input:
+
+- params:
+  - `id` UUID transaction id
+- query: none
+- body content type:
+  - `multipart/form-data`
+- form-data:
+  - `paymentProof` file image
+
+Catatan:
+
+- hanya bisa dipakai oleh pemilik transaksi
+- hanya bisa upload saat status `WAITING_FOR_PAYMENT`
+- endpoint ini tidak bisa dipakai lagi setelah transaksi sudah masuk `WAITING_FOR_ADMIN_CONFIRMATION`
+- setelah upload sukses, status transaksi menjadi `WAITING_FOR_ADMIN_CONFIRMATION`
+- setelah upload sukses, `expiredAt` transaksi digeser menjadi `3 jam` dari waktu upload untuk window review organizer
+
+Auth:
+
+- bearer token wajib
+
+Contoh:
+
+```bash
+curl -X PATCH "http://localhost:8080/api/transactions/TRANSACTION_UUID/payment-proof" \
+  -H "Authorization: Bearer ACCESS_TOKEN" \
+  -F "paymentProof=@C:/temp/payment-proof.jpg"
+```
+
+Response sukses:
+
+```json
+{
+  "message": "Payment proof uploaded successfully",
+  "data": {
+    "id": "TRANSACTION_UUID",
+    "status": "WAITING_FOR_ADMIN_CONFIRMATION",
+    "paymentProofUrl": "https://res.cloudinary.com/.../payment-proof.jpg",
+    "paymentProofUploadedAt": "2026-04-30T02:00:00.000Z",
+    "expiredAt": "2026-04-30T05:00:00.000Z"
+  }
+}
+```
+
+Response error yang umum:
+
+- `400 Bad Request`
+
+```json
+{
+  "message": "Transaction ID must be a valid UUID"
+}
+```
+
+```json
+{
+  "message": "No file uploaded"
+}
+```
+
+```json
+{
+  "message": "Invalid file type. Only JPG, PNG, and WEBP are allowed."
+}
+```
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+- `404 Not Found`
+
+```json
+{
+  "message": "Transaction not found"
+}
+```
+
+- `409 Conflict`
+
+```json
+{
+  "message": "Transaction status can no longer be changed"
+}
+```
+
+```json
+{
+  "message": "Transaction status has changed"
+}
+```
+
+### `PATCH /api/transactions/:id/status`
+
+Kegunaan:
+
+- organizer atau admin review transaksi customer
+- status yang diterima dari API mengikuti enum transaction yang sudah ada
+
+Expected input:
+
+- params:
+  - `id` UUID transaction id
+- query: none
+- body:
+  - `status` enum: `DONE` | `REJECTED`
+
+Catatan:
+
+- hanya organizer pemilik event atau admin yang bisa akses
+- hanya transaksi dengan status `WAITING_FOR_ADMIN_CONFIRMATION` yang bisa direview
+- transaksi yang sudah `DONE`, `REJECTED`, `EXPIRED`, atau `CANCELED` tidak bisa diubah lagi
+- `DONE` dipakai sebagai status approve/final accepted
+- `REJECTED` akan mengubah status database menjadi `REJECTED`
+- saat `REJECTED`, quota ticket, voucher, coupon, dan point akan dibalikin
+- saat `DONE`, ticket akan dibuat dan kode ticket dikirim lewat email
+- frontend sebaiknya menampilkan `expiredAt` pada status `WAITING_FOR_ADMIN_CONFIRMATION` sebagai batas waktu follow-up organizer
+
+Auth:
+
+- bearer token wajib
+- role `ORGANIZER` atau `ADMIN`
+
+Contoh body:
+
+```json
+{
+  "status": "DONE"
+}
+```
+
+Contoh body reject:
+
+```json
+{
+  "status": "REJECTED"
+}
+```
+
+Response sukses approve:
+
+```json
+{
+  "message": "Transaction status updated successfully",
+  "data": {
+    "id": "TRANSACTION_UUID",
+    "status": "DONE"
+  }
+}
+```
+
+Response sukses rejected:
+
+```json
+{
+  "message": "Transaction status updated successfully",
+  "data": {
+    "id": "TRANSACTION_UUID",
+    "status": "REJECTED"
+  }
+}
+```
+
+Response error yang umum:
+
+- `400 Bad Request`
+
+```json
+{
+  "message": "Transaction ID must be a valid UUID"
+}
+```
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+- `403 Forbidden`
+
+```json
+{
+  "message": "Forbidden"
+}
+```
+
+```json
+{
+  "message": "You are not allowed to update this transaction status"
+}
+```
+
+- `404 Not Found`
+
+```json
+{
+  "message": "Transaction not found"
+}
+```
+
+- `409 Conflict`
+
+```json
+{
+  "message": "Transaction status can no longer be changed"
+}
+```
+
+```json
+{
+  "message": "Transaction status has changed"
+}
+```
+
 ## Error Umum
 
 Format error umum:
@@ -1651,8 +2310,296 @@ Message yang sering muncul:
 3. `GET /api/event/:id` untuk lihat `ticketTypeId` yang mau dibeli.
 4. Optional: `GET /api/transactions/vouchers/check` untuk cek voucher event.
 5. Optional: `GET /api/transactions/coupons/me` untuk pilih coupon.
-6. `POST /api/transactions` untuk create transaksi.
-7. `GET /api/transactions/me?status=WAITING_FOR_PAYMENT` untuk lihat ongoing transaction di profile.
+6. Optional: `GET /api/transactions/points/me` untuk tahu total point available.
+7. `POST /api/transactions` untuk create transaksi.
+8. `PATCH /api/transactions/:id/payment-proof` untuk upload bukti transfer.
+9. `GET /api/transactions/me?status=WAITING_FOR_PAYMENT` atau `GET /api/transactions/me?status=WAITING_FOR_ADMIN_CONFIRMATION` untuk lihat ongoing transaction di profile beserta `expiredAt` terbarunya.
+
+## Testing Flow Cepat Review Transaksi Organizer
+
+1. `POST /api/auth/login` sebagai customer.
+2. Buat transaksi dulu sampai status `WAITING_FOR_PAYMENT`.
+3. `PATCH /api/transactions/:id/payment-proof` sebagai customer.
+4. `POST /api/auth/login` sebagai organizer pemilik event.
+5. `PATCH /api/transactions/:id/status` dengan body `{"status":"DONE"}` untuk approve.
+6. Atau `PATCH /api/transactions/:id/status` dengan body `{"status":"REJECTED"}` untuk reject dan rollback resource.
+7. `GET /api/transactions/organizer/me?status=WAITING_FOR_ADMIN_CONFIRMATION` untuk ambil inbox transaksi yang perlu direview organizer.
+8. `GET /api/transactions/organizer/revenue?groupBy=month&year=2026` untuk grafik revenue organizer.
+
+## Ticket Endpoints
+
+### `GET /api/tickets/attendance-stats`
+
+Kegunaan:
+
+- ambil statistik attendance untuk satu event
+- cocok buat card dashboard event seperti total tiket, total hadir, dan persentase kehadiran
+
+Expected input:
+
+- params: none
+- body: none
+- query:
+  - `eventId` UUID
+
+Catatan:
+
+- endpoint ini lebih cocok untuk dashboard daripada disisipkan ke `meta GET /api/tickets`
+- hanya bisa diakses oleh `ORGANIZER` pemilik event atau `ADMIN`
+- statistik dihitung dari tabel tiket, jadi hanya tiket dari transaksi `DONE` yang akan ikut
+- `attendancePercentage` dihitung dari `totalCheckedInTickets / totalTickets * 100`
+- kalau `totalTickets = 0`, `attendancePercentage` akan bernilai `0`
+
+Auth:
+
+- bearer token wajib
+- role `CUSTOMER`
+- role `ORGANIZER` atau `ADMIN`
+
+Contoh:
+
+```txt
+GET /api/tickets/attendance-stats?eventId=<event_uuid>
+```
+
+Response sukses:
+
+```json
+{
+  "message": "Ticket attendance stats fetched successfully",
+  "data": {
+    "event": {
+      "id": "EVENT_UUID",
+      "name": "Derby Night",
+      "venue": "Main Stadium",
+      "startAt": "2026-05-10T19:00:00.000Z"
+    },
+    "totalTickets": 250,
+    "totalCheckedInTickets": 175,
+    "totalNotCheckedInTickets": 75,
+    "attendancePercentage": 70
+  }
+}
+```
+
+### `GET /api/tickets`
+
+Kegunaan:
+
+- ambil list tiket dengan query yang fleksibel
+- bisa dipakai untuk filter tiket yang sudah attending atau belum
+
+Expected input:
+
+- params: none
+- body: none
+- query possible:
+  - `id` UUID ticket id
+  - `organizerId` UUID
+  - `transactionId` UUID
+  - `transactionItemId` UUID
+  - `eventId` UUID
+  - `userId` UUID
+  - `code` string exact match
+  - `codeLike` string contains search
+  - `eventNameLike` string contains search
+  - `ticketTypeNameLike` string contains search
+  - `checkedIn` boolean
+  - `sortBy` enum: `code` | `checkedInAt` | `createdAt`
+  - `sortOrder` enum: `asc` | `desc`
+  - `page` number, default `1`
+  - `limit` number, default `10`, max `100`
+
+Catatan:
+
+- tiket hanya akan ada kalau transaksi asalnya sudah `DONE`
+- untuk role `CUSTOMER`, hasil otomatis dibatasi ke tiket milik user login
+- untuk role `ORGANIZER`, hasil otomatis dibatasi ke tiket dari event milik organizer login
+- untuk role `ADMIN`, semua tiket bisa diakses, dan query `organizerId` bisa dipakai untuk filter organizer tertentu
+- semua query opsional
+- query bisa digabung
+- `codeLike`, `eventNameLike`, dan `ticketTypeNameLike` pakai contains case-insensitive
+- `checkedIn=true` artinya hanya tiket yang sudah attendance
+- `checkedIn=false` artinya hanya tiket yang belum attendance
+- default sorting: `createdAt desc`
+
+Auth:
+
+- bearer token wajib
+
+Contoh:
+
+```txt
+GET /api/tickets
+GET /api/tickets?checkedIn=true
+GET /api/tickets?checkedIn=false&eventId=<event_uuid>
+GET /api/tickets?codeLike=TKT
+GET /api/tickets?ticketTypeNameLike=vip&sortBy=checkedInAt&sortOrder=asc
+GET /api/tickets?page=2&limit=20
+```
+
+Response sukses:
+
+```json
+{
+  "message": "Tickets fetched successfully",
+  "data": [
+    {
+      "id": "TICKET_UUID",
+      "code": "TKTABC123456",
+      "checkedInAt": null,
+      "createdAt": "2026-04-30T07:00:00.000Z",
+      "user": {
+        "id": "USER_UUID",
+        "email": "customer@mail.com",
+        "firstName": "John",
+        "lastName": "Doe"
+      },
+      "transaction": {
+        "id": "TRANSACTION_UUID",
+        "status": "DONE",
+        "event": {
+          "id": "EVENT_UUID",
+          "name": "Derby Night",
+          "organizerId": "ORGANIZER_UUID"
+        }
+      },
+      "transactionItem": {
+        "id": "TRANSACTION_ITEM_UUID",
+        "ticketType": {
+          "id": "TICKET_TYPE_UUID",
+          "name": "VIP"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+### `PATCH /api/tickets/check-in`
+
+Kegunaan:
+
+- verifikasi keaslian tiket berdasarkan `code`
+- kalau tiket valid dan belum pernah dipakai, `checkedInAt` akan diisi dengan waktu sekarang
+
+Expected input:
+
+- params: none
+- query: none
+- body:
+  - `code` string
+
+Catatan:
+
+- hanya bisa diakses oleh `ORGANIZER` atau `ADMIN`
+- untuk role `ORGANIZER`, tiket hanya bisa diverifikasi kalau tiket itu berasal dari event milik organizer tersebut
+- tiket harus ditemukan berdasarkan `code`
+- tiket hanya bisa check-in kalau transaksi asalnya sudah `DONE`
+- tiket yang sudah punya `checkedInAt` tidak bisa dipakai lagi
+- pencarian kode tiket bersifat case-insensitive
+
+Auth:
+
+- bearer token wajib
+- role `ORGANIZER` atau `ADMIN`
+
+Contoh body:
+
+```json
+{
+  "code": "TKTABC123456"
+}
+```
+
+Response sukses:
+
+```json
+{
+  "message": "Ticket checked in successfully",
+  "data": {
+    "id": "TICKET_UUID",
+    "code": "TKTABC123456",
+    "checkedInAt": "2026-04-30T08:15:00.000Z",
+    "user": {
+      "id": "USER_UUID",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "customer@mail.com"
+    },
+    "event": {
+      "id": "EVENT_UUID",
+      "name": "Derby Night",
+      "venue": "Main Stadium",
+      "startAt": "2026-05-10T19:00:00.000Z"
+    },
+    "ticketType": {
+      "id": "TICKET_TYPE_UUID",
+      "name": "VIP"
+    }
+  }
+}
+```
+
+Response error yang umum:
+
+- `400 Bad Request`
+
+```json
+{
+  "message": "Ticket code is required"
+}
+```
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+- `403 Forbidden`
+
+```json
+{
+  "message": "Forbidden"
+}
+```
+
+```json
+{
+  "message": "You are not allowed to verify this ticket"
+}
+```
+
+- `404 Not Found`
+
+```json
+{
+  "message": "Ticket not found"
+}
+```
+
+- `409 Conflict`
+
+```json
+{
+  "message": "Ticket is not valid for check-in"
+}
+```
+
+```json
+{
+  "message": "Ticket has already been checked in"
+}
+```
 
 ## File Terkait
 

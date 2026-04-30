@@ -10,7 +10,12 @@ import UserProfilePage from "./pages/user/profile/profile.page";
 import CreateEventPage from "./pages/event/create-event/create-event.page";
 import UpdateEventPage from "./pages/event/update-event/update-event.page";
 import DashboardPage from "./pages/organizer/dashboard/dashboard.page";
+import OrganizerEventDetailPage from "./pages/organizer/event-detail/organizer-event-detail.page";
 import NotFoundPage from "./pages/not-found/not-found.page";
+import HomePage from "./pages/home/home.page";
+import TransactionsPage from "./pages/transaction/transactions.page";
+import TransactionCheckoutPage from "./pages/transaction/checkout/transaction-checkout.page";
+import EventDetailPage from "./pages/event/detail/event-detail.page";
 
 function App() {
   return (
@@ -18,7 +23,7 @@ function App() {
       <main className="relative">
         <Navbar />
         <Routes>
-          <Route path="/" element={<div>dummy homepage</div>} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route
@@ -30,6 +35,16 @@ function App() {
             element={<ForgotPasswordVerificationPage />}
           />
           <Route path="/profile" element={<UserProfilePage />} />
+          <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/event/:eventIdentifier" element={<EventDetailPage />} />
+          <Route
+            path="/dashboard/events/:eventIdentifier"
+            element={<OrganizerEventDetailPage />}
+          />
+          <Route
+            path="/transactions/checkout/:eventIdentifier"
+            element={<TransactionCheckoutPage />}
+          />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/event/create" element={<CreateEventPage />} />
           <Route path="/event/update/:id" element={<UpdateEventPage />} />
