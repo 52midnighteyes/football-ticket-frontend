@@ -7,14 +7,24 @@ export interface IUserParams {
   firstName: string;
   lastName: string;
   role: string;
+  avatarUrl: string | null;
+  isVerified: boolean;
+  referralCode?: string;
+  points?: number;
 }
+
+type UserPayload = IUserParams | { user: IUserParams };
+
+const normalizeUser = (payload: UserPayload): IUserParams =>
+  "user" in payload ? payload.user : payload;
 
 interface IAuthStore {
   user: IUserParams | null;
   accessToken: string | null;
   isHydrated: boolean;
-  setSession: (user: IUserParams, accessToken: string) => void;
+  setSession: (user: UserPayload, accessToken: string) => void;
   setAccessToken: (accessToken: string) => void;
+  setUser: (user: UserPayload) => void;
   setHydrated: (state: boolean) => void;
   clearSession: () => void;
 }
@@ -28,7 +38,7 @@ export const useAuthStore = create<IAuthStore>()(
 
       setSession: (user, accessToken) =>
         set({
-          user,
+          user: normalizeUser(user),
           accessToken,
         }),
 
@@ -41,6 +51,11 @@ export const useAuthStore = create<IAuthStore>()(
         set({
           isHydrated: state,
         }),
+      setUser: (user) => {
+        set({
+          user: normalizeUser(user),
+        });
+      },
 
       clearSession: () =>
         set({
@@ -52,14 +67,21 @@ export const useAuthStore = create<IAuthStore>()(
       name: "auth-storage",
       partialize: (state) => ({
         user: state.user,
+        accessToken: state.accessToken,
       }),
       onRehydrateStorage: () => (state, error) => {
         if (error) {
           console.error("Failed to hydrate auth store", error);
         }
 
+        const hydratedUser = state?.user as UserPayload | null | undefined;
+
+        if (hydratedUser && !("firstName" in hydratedUser) && "user" in hydratedUser) {
+          state?.setUser(hydratedUser);
+        }
+
         state?.setHydrated(true);
       },
-    },
-  ),
+    }
+  )
 );

@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/auth.store";
+import type { IUserSession } from "@/api/auth/auth.interface";
 
 interface RetryAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -10,8 +11,39 @@ export interface IRefreshTokenResponse {
   message: string;
   data: {
     accessToken: string;
+    user: IUserSession;
   };
 }
+
+function isRefreshRequest(url?: string) {
+  return url?.includes("/auth/refresh-token") ?? false;
+}
+
+function shouldSkipAutoRefresh(url?: string) {
+  if (!url) {
+    return false;
+  }
+
+  return (
+    isRefreshRequest(url) ||
+    url.includes("/auth/login") ||
+    url.includes("/auth/register") ||
+    url.includes("/auth/request-forgot-password") ||
+    url.includes("/auth/forgot-password/") ||
+    url.includes("/auth/verify/")
+  );
+}
+
+function clearPersistedSession() {
+  useAuthStore.getState().clearSession();
+
+  try {
+    useAuthStore.persist.clearStorage();
+  } catch (error) {
+    console.error("failed to clear persisted auth storage", error);
+  }
+}
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 10000,
@@ -22,7 +54,7 @@ api.interceptors.request.use(
   (config) => {
     const accessToken = useAuthStore.getState().accessToken;
 
-    if (accessToken) {
+    if (accessToken && !isRefreshRequest(config.url)) {
       config.headers.set("Authorization", `Bearer ${accessToken}`);
     }
 
@@ -41,20 +73,18 @@ api.interceptors.response.use(
     }
 
     const status = error.response?.status;
-    const isRefreshRequest = originalRequest.url?.includes(
-      "/auth/refresh-token",
-    );
+    const skipAutoRefresh = shouldSkipAutoRefresh(originalRequest.url);
 
-    if (status === 401 && !originalRequest._retry && !isRefreshRequest) {
+    if (status === 401 && !originalRequest._retry && !skipAutoRefresh) {
       originalRequest._retry = true;
 
       try {
         const response = await api.post<IRefreshTokenResponse>(
           "/auth/refresh-token",
         );
-        const newAccessToken = response.data.data.accessToken;
+        const { accessToken: newAccessToken, user } = response.data.data;
 
-        useAuthStore.getState().setAccessToken(newAccessToken);
+        useAuthStore.getState().setSession(user, newAccessToken);
 
         originalRequest.headers.set(
           "Authorization",
@@ -62,9 +92,9 @@ api.interceptors.response.use(
         );
 
         return api(originalRequest);
-      } catch (refreshError) {
-        useAuthStore.getState().clearSession();
-        return Promise.reject(refreshError);
+      } catch {
+        clearPersistedSession();
+        return Promise.reject(error);
       }
     }
 

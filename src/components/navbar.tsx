@@ -1,0 +1,158 @@
+import { Link, useNavigate } from "react-router";
+import { optimizeCloudinaryImage } from "@/lib/cloudinary";
+import { useAuthStore } from "@/store/auth.store";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { Button } from "./ui/button";
+import { logOut } from "@/api/auth/auth.api";
+
+const organizerSession = [
+  { name: "Profile", link: "/profile" },
+  { name: "Dashboard", link: "/dashboard" },
+];
+
+const customerSession = [
+  { name: "Profile", link: "/profile" },
+  { name: "Transactions", link: "/transactions" },
+];
+
+const onLogoutSession = [
+  { name: "Login", link: "/login" },
+  { name: "Register", link: "/register" },
+];
+
+export const avatarFallback =
+  "https://res.cloudinary.com/dhjorpzhh/image/upload/v1775836308/TwitterEgg_HP_iifytc.webp";
+
+export default function Navbar() {
+  const navigate = useNavigate();
+  const clearSession = useAuthStore((state) => state.clearSession);
+  const isHydrated = useAuthStore((state) => state.isHydrated);
+  const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isAuthenticated = !!user && !!accessToken;
+
+  const handleLogout = () => {
+    try {
+      clearSession();
+      useAuthStore.persist.clearStorage();
+      logOut();
+    } catch (error) {
+      console.error("failed to clear persisted session on logout", error);
+    }
+  };
+
+  const avatarUrl = optimizeCloudinaryImage(user?.avatarUrl ?? avatarFallback);
+
+  const menuItems = !isAuthenticated
+    ? onLogoutSession
+    : user.role === "ORGANIZER"
+    ? organizerSession
+    : customerSession;
+
+  return (
+    <section className="group absolute top-0 left-0 z-10 flex max-h-20 w-full items-center bg-primary transition-all duration-300 lg:bg-transparent lg:hover:bg-primary">
+      <div className="flex w-full justify-between p-4 lg:px-25 items-center">
+        <Link
+          to="/"
+          className="font-bold h-fit text-background transition-all duration-300 lg:text-primary lg:group-hover:text-background lg:hover:scale-105"
+        >
+          MATCHPASS
+        </Link>
+
+        <div className={!isAuthenticated ? "hidden" : "flex items-center gap-2"}>
+          {user?.role === "ORGANIZER" ? (
+            <Button
+              type="button"
+              onClick={() => navigate("/event/create")}
+              className="px-4 font-semibold text-sm transition-all duration-300 lg:group-hover:bg-white lg:group-hover:text-primary lg:hover:scale-105"
+            >
+              Create Event
+            </Button>
+          ) : null}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="aspect-square w-10 overflow-hidden rounded-full"
+                aria-label="Open user menu"
+              >
+                <img
+                  src={avatarUrl}
+                  alt="User avatar"
+                  className="h-10 w-10 object-cover object-center"
+                />
+              </button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="center">
+              {isAuthenticated && user ? (
+                <>
+                  <DropdownMenuItem
+                    disabled
+                    className="flex  flex-col items-start gap-0.5 w-full opacity-100 "
+                  >
+                    <p className="font-semibold first-letter:capitalize ">
+                      {user.firstName} {user.lastName}
+                    </p>
+                    <span className="text-accent first-letter:capitalize lowercase">
+                      {user.role}
+                    </span>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
+
+              {!isHydrated ? (
+                <DropdownMenuItem disabled>Loading...</DropdownMenuItem>
+              ) : (
+                menuItems.map(({ name, link }) => (
+                  <DropdownMenuItem key={link} asChild>
+                    <Link to={link}>{name}</Link>
+                  </DropdownMenuItem>
+                ))
+              )}
+
+              {isAuthenticated ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/" onClick={handleLogout}>
+                      Logout
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className={isAuthenticated ? "hidden" : "flex gap-2"}>
+          {!isHydrated ? (
+            <p className="text-background lg:text-foreground lg:group-hover:text-background">
+              Loading...
+            </p>
+          ) : (
+            onLogoutSession.map(({ name, link }) => (
+              <Button
+                key={link}
+                type="button"
+                onClick={() => navigate(link)}
+                className="px-2 font-semibold lg:px-5 text-sm transition-all duration-300 lg:group-hover:bg-white lg:group-hover:text-primary lg:hover:scale-110 lg:hover:font-semibold"
+              >
+                {name}
+              </Button>
+            ))
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
