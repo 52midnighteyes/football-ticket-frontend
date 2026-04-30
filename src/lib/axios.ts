@@ -1,6 +1,7 @@
 import axios, { AxiosError } from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/auth.store";
+import type { IUserSession } from "@/api/auth/auth.interface";
 
 interface RetryAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -10,6 +11,7 @@ export interface IRefreshTokenResponse {
   message: string;
   data: {
     accessToken: string;
+    user: IUserSession;
   };
 }
 
@@ -80,9 +82,9 @@ api.interceptors.response.use(
         const response = await api.post<IRefreshTokenResponse>(
           "/auth/refresh-token",
         );
-        const newAccessToken = response.data.data.accessToken;
+        const { accessToken: newAccessToken, user } = response.data.data;
 
-        useAuthStore.getState().setAccessToken(newAccessToken);
+        useAuthStore.getState().setSession(user, newAccessToken);
 
         originalRequest.headers.set(
           "Authorization",
