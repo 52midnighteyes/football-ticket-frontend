@@ -8,6 +8,7 @@ export default function RequestForgotPasswordPage() {
   const [isSubmitted, setIsSubmitted] = useState<boolean | null>(null);
 
   const userSession = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const navigate = useNavigate();
   const isHydrated = useAuthStore((state) => state.isHydrated);
 
@@ -17,10 +18,10 @@ export default function RequestForgotPasswordPage() {
 
   useEffect(() => {
     if (!isHydrated) return;
-    if (userSession) {
+    if (userSession && accessToken) {
       navigate("/");
     }
-  }, [userSession, isHydrated, navigate]);
+  }, [accessToken, userSession, isHydrated, navigate]);
 
   useEffect(() => {
     if (!isSubmitted) return;

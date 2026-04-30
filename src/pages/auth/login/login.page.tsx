@@ -5,15 +5,16 @@ import { useAuthStore } from "@/store/auth.store";
 
 export default function LoginPage() {
   const userSession = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const navigate = useNavigate();
   const isHydrated = useAuthStore((state) => state.isHydrated);
 
   useEffect(() => {
     if (!isHydrated) return;
-    if (userSession) {
+    if (userSession && accessToken) {
       navigate("/", { replace: true });
     }
-  }, [userSession, isHydrated, navigate]);
+  }, [accessToken, userSession, isHydrated, navigate]);
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center gap-5 bg-background px-6 py-15">
       <div className="text-center">

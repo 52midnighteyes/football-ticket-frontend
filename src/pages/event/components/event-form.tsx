@@ -21,6 +21,7 @@ import type {
 } from "@/api/event/event.interface";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import EventBanner from "@/components/event-banner";
 import {
   Card,
   CardContent,
@@ -551,12 +552,13 @@ export default function EventForm({
                       ) : null}
                     </div>
 
-                    <div className="overflow-hidden rounded-2xl border border-dashed border-primary/25 bg-background/75 shadow-inner">
+                    <div className="overflow-hidden rounded-xl border border-dashed border-primary/25 bg-background/75 shadow-inner">
                       {previewBannerUrl ? (
-                        <img
+                        <EventBanner
                           src={previewBannerUrl}
                           alt="Selected event banner preview"
-                          className="aspect-video w-full object-cover"
+                          placeholder="Upload a clean event banner"
+                          className="w-full"
                         />
                       ) : (
                         <div className="flex aspect-video flex-col items-center justify-center gap-3 px-6 text-center">

@@ -13,13 +13,12 @@ import { logOut } from "@/api/auth/auth.api";
 
 const organizerSession = [
   { name: "Profile", link: "/profile" },
-  { name: "Create Event", link: "/event/create" },
   { name: "Dashboard", link: "/dashboard" },
 ];
 
 const customerSession = [
   { name: "Profile", link: "/profile" },
-  { name: "My Tickets", link: "/my-tickets" },
+  { name: "Transactions", link: "/transactions" },
 ];
 
 const onLogoutSession = [
@@ -35,6 +34,8 @@ export default function Navbar() {
   const clearSession = useAuthStore((state) => state.clearSession);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isAuthenticated = !!user && !!accessToken;
 
   const handleLogout = () => {
     try {
@@ -48,7 +49,7 @@ export default function Navbar() {
 
   const avatarUrl = optimizeCloudinaryImage(user?.avatarUrl ?? avatarFallback);
 
-  const menuItems = !user
+  const menuItems = !isAuthenticated
     ? onLogoutSession
     : user.role === "ORGANIZER"
     ? organizerSession
@@ -64,7 +65,17 @@ export default function Navbar() {
           MATCHPASS
         </Link>
 
-        <div className={!user ? "hidden" : "block"}>
+        <div className={!isAuthenticated ? "hidden" : "flex items-center gap-2"}>
+          {user?.role === "ORGANIZER" ? (
+            <Button
+              type="button"
+              onClick={() => navigate("/event/create")}
+              className="px-4 font-semibold text-sm transition-all duration-300 lg:group-hover:bg-white lg:group-hover:text-primary lg:hover:scale-105"
+            >
+              Create Event
+            </Button>
+          ) : null}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -81,7 +92,7 @@ export default function Navbar() {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="center">
-              {user ? (
+              {isAuthenticated && user ? (
                 <>
                   <DropdownMenuItem
                     disabled
@@ -109,7 +120,7 @@ export default function Navbar() {
                 ))
               )}
 
-              {user ? (
+              {isAuthenticated ? (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -123,7 +134,7 @@ export default function Navbar() {
           </DropdownMenu>
         </div>
 
-        <div className={user ? "hidden" : "flex gap-2"}>
+        <div className={isAuthenticated ? "hidden" : "flex gap-2"}>
           {!isHydrated ? (
             <p className="text-background lg:text-foreground lg:group-hover:text-background">
               Loading...

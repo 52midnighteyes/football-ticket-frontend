@@ -62,11 +62,27 @@ export interface IPaginatedResponse<T> {
 }
 
 export interface IEventQueryParams {
+  id?: string;
+  slug?: string;
+  slugLike?: string;
+  descriptionLike?: string;
+  venueLike?: string;
+  addressLike?: string;
   organizerId?: string;
   locationId?: string;
   categoryId?: string;
   nameLike?: string;
   status?: EventStatus;
+  sortBy?:
+    | "name"
+    | "slug"
+    | "venue"
+    | "address"
+    | "startAt"
+    | "endAt"
+    | "createdAt"
+    | "updatedAt";
+  sortOrder?: "asc" | "desc";
   page?: number;
   limit?: number;
 }

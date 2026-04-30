@@ -27,6 +27,8 @@ export interface IUserSession {
   role: TUserRole;
   avatarUrl: string | null;
   isVerified: boolean;
+  referralCode?: string;
+  points?: number;
 }
 
 export interface IAuthData {

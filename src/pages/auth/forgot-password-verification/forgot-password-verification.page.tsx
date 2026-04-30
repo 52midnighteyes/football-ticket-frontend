@@ -15,8 +15,9 @@ export default function ForgotPasswordVerificationPage() {
   );
 
   const userSession = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const isHydrated = useAuthStore((state) => state.isHydrated);
-  const isActiveSession = isHydrated && !!userSession;
+  const isActiveSession = isHydrated && !!userSession && !!accessToken;
   const isLoading = !isHydrated && tokenStatus === "checking";
 
   const { token } = useParams<{ token: string }>();

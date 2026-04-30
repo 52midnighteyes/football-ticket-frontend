@@ -1,3 +1,4 @@
+import axios from "axios";
 import type { ApiResponse } from "@/interface/api.interface";
 import api from "@/lib/axios";
 import type {
@@ -87,6 +88,29 @@ export const getEvents = async (
 export const getEventById = async (id: string): Promise<ApiResponse<IEvent>> => {
   const response = await api.get<ApiResponse<IEvent>>(`/event/${id}`);
   return response.data;
+};
+
+export const getEventBySlug = async (
+  slug: string,
+): Promise<ApiResponse<IEvent>> => {
+  const response = await api.get<ApiResponse<IEvent>>(
+    `/event/slug/${encodeURIComponent(slug)}`,
+  );
+  return response.data;
+};
+
+export const getEventByIdentifier = async (
+  identifier: string,
+): Promise<ApiResponse<IEvent>> => {
+  try {
+    return await getEventBySlug(identifier);
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return getEventById(identifier);
+    }
+
+    throw error;
+  }
 };
 
 export const updateEvent = async (
