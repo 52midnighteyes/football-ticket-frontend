@@ -301,7 +301,16 @@ export default function ProfileCard({ user }: ProfileCardProps) {
               {typeof availablePoints === "number" ? (
                 <InfoRow
                   label="Available points"
-                  value={`${new Intl.NumberFormat("id-ID").format(availablePoints)} pts`}
+                  value={
+                    <div className="space-y-1">
+                      <p>
+                        {new Intl.NumberFormat("id-ID").format(availablePoints)} pts
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Referral points expire 3 months after they are earned.
+                      </p>
+                    </div>
+                  }
                 />
               ) : (
                 <InfoRow

@@ -31,6 +31,9 @@ export function UseAllPointsToggle({
           <p className="text-sm text-muted-foreground">
             Checking how many active points can be used for this transaction.
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Points expire 3 months after they are earned.
+          </p>
         </div>
       </div>
     );
@@ -48,6 +51,9 @@ export function UseAllPointsToggle({
               Points unavailable right now
             </p>
             <p className="text-sm text-muted-foreground">{errorMessage}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Points expire 3 months after they are earned.
+            </p>
           </div>
         </div>
         {onRetry ? (
@@ -90,6 +96,9 @@ export function UseAllPointsToggle({
             {noPointsAvailable
               ? "No points available in your account right now."
               : `Available points: ${formatRupiah(availablePoints)}`}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Points expire 3 months after they are earned.
           </p>
         </div>
       </div>

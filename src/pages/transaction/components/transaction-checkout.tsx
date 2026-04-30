@@ -38,6 +38,7 @@ import {
   formatRupiah,
   formatTransactionDateTime,
   getTransactionErrorMessage,
+  isPointsBalanceChangedError,
   isEventPurchasable,
 } from "@/pages/transaction/transaction.utils";
 import { toast } from "sonner";
@@ -165,6 +166,10 @@ export function TransactionCheckout({
       toast.success(response.message || "Transaction created successfully.");
       onTransactionCreated(response.data);
     } catch (error) {
+      if (isPointsBalanceChangedError(error)) {
+        await loadAvailablePoints();
+      }
+
       const friendlyMessage = getTransactionErrorMessage(error);
       setSubmitErrorMessage(friendlyMessage);
       toast.error(friendlyMessage);
@@ -303,8 +308,8 @@ export function TransactionCheckout({
           </Button>
 
           <p className="text-sm text-muted-foreground">
-            Backend validation is always final for quota, discount rules,
-            duplicate prevention, and payable total.
+            Backend validation is always final for quota, coupon and points
+            availability, duplicate prevention, and payable total.
           </p>
         </div>
       </div>
