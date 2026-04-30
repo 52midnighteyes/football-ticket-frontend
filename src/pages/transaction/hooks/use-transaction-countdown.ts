@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 
 function formatCountdown(milliseconds: number) {
   const totalSeconds = Math.max(Math.floor(milliseconds / 1000), 0);
-  const hours = Math.floor(totalSeconds / 3600);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
-  return `${hours}h ${String(minutes).padStart(2, "0")}m ${String(
-    seconds,
-  ).padStart(2, "0")}s`;
+  return `${days}d ${String(hours).padStart(2, "0")}h ${String(
+    minutes,
+  ).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
 }
 
 export function useTransactionCountdown(

@@ -1519,6 +1519,9 @@ Response sukses:
 - `voucher` pakai kode, `coupon` pakai `couponId`
 - `voucher` wajib cocok dengan `eventId` transaksi
 - `point` dipakai dengan rasio `1 point = 1 rupiah`
+- source of truth expiry point sekarang ada di kolom `Point.expiresAt`
+- point reward referral expire `3 bulan` setelah didapat dan nilai itu disimpan ke `Point.expiresAt`
+- coupon referral register expire `3 bulan` setelah didapat
 - `coupon` dipakai dengan rasio `1 amount = 1 rupiah`
 - `voucher` dipakai dengan rasio `1 amount = 1 rupiah`
 - saat transaksi dibuat, quota `ticketType` langsung dikurangi
@@ -1555,6 +1558,9 @@ Catatan:
 - quantity ticket selalu `1`
 - user tidak bisa transaksi ulang untuk event yang sama kalau masih punya transaksi `WAITING_FOR_PAYMENT`, `WAITING_FOR_ADMIN_CONFIRMATION`, atau `DONE`
 - kalau `usePoints = true`, backend akan otomatis memakai semua point available sampai batas maksimal yang bisa mengurangi tagihan
+- point yang sudah expired tidak akan dihitung sebagai available balance dan tidak bisa dipakai saat create transaction
+- backend mengecek expiry point dua kali: saat hitung available balance dan saat reserve point di dalam transaksi
+- prioritas pemakaian point mengikuti point yang `expiresAt`-nya paling dekat lebih dulu
 - kalau total diskon dan point menutupi semua harga tiket, transaksi akan langsung `DONE`
 - kalau masih ada sisa bayar, transaksi akan `WAITING_FOR_PAYMENT` dan punya `expiredAt` 2 jam dari waktu create
 - nilai `expiredAt` ini akan berubah lagi kalau user berhasil upload bukti transfer
@@ -1651,6 +1657,12 @@ Response error yang umum:
 }
 ```
 
+```json
+{
+  "message": "Insufficient points"
+}
+```
+
 - `404 Not Found`
 
 ```json
@@ -1676,6 +1688,12 @@ Response error yang umum:
 ```json
 {
   "message": "You already have an active or completed transaction for this event"
+}
+```
+
+```json
+{
+  "message": "Point is no longer available"
 }
 ```
 
@@ -1972,6 +1990,7 @@ Expected input:
 Catatan:
 
 - hanya return coupon yang belum dipakai dan belum expired
+- coupon referral register berlaku `3 bulan` sejak didapat
 - endpoint ini dipakai frontend buat menampilkan pilihan coupon yang nanti dikirim sebagai `couponId`
 
 Auth:
@@ -2018,7 +2037,19 @@ Expected input:
 Catatan:
 
 - hanya menghitung point yang masih punya `pointLeft > 0`
-- hanya menghitung point yang belum expired
+- hanya menghitung point yang belum expired berdasarkan `Point.expiresAt`
+- untuk reward referral, masa berlaku point adalah `3 bulan` sejak point didapat
+- endpoint ini hanya mengembalikan total balance, belum mengembalikan daftar point batch atau detail `expiresAt` per point
+
+Response error yang umum:
+
+- `401 Unauthorized`
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
 
 Auth:
 

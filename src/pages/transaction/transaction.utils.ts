@@ -195,6 +195,13 @@ export function getTransactionErrorMessage(error: unknown) {
     }
 
     if (normalizedMessage.includes("point")) {
+      if (
+        normalizedMessage.includes("insufficient points") ||
+        normalizedMessage.includes("point is no longer available")
+      ) {
+        return "Your points balance has changed. Please review your payment summary.";
+      }
+
       return "Your points can't be applied to this checkout amount.";
     }
 
@@ -224,6 +231,23 @@ export function getTransactionErrorMessage(error: unknown) {
   }
 
   return "We couldn't complete that transaction. Please try again.";
+}
+
+export function isPointsBalanceChangedError(error: unknown) {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+
+  const message = error.response?.data?.message?.toLowerCase();
+
+  if (!message) {
+    return false;
+  }
+
+  return (
+    message.includes("insufficient points") ||
+    message.includes("point is no longer available")
+  );
 }
 
 export function enrichTransactions(
